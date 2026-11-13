@@ -57,7 +57,8 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const $=id=>document.getElementById(id),key='mfit-v1';
-const todayKey=new Date().toISOString().slice(0,10);
+const localDayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const todayKey=localDayKey();
 let data=JSON.parse(localStorage.getItem(key)||'{}');
 data.days=data.days||{};data.days[todayKey]=data.days[todayKey]||{steps:0,water:0,food:[],burned:0};let day=data.days[todayKey];
 let fasting=!!data.fasting,fastStart=data.fastStart||0,fastTimer=null,fastTarget=Number(data.fastTarget)||16;
@@ -65,9 +66,9 @@ let mode='Walk',active=false,startedAt=0,elapsed=0,activityTimer=null,watchId=nu
 let liveMap=null,routeLayer=null,currentMarker=null,mapStyle=data.mapStyle||'street',streetTiles=null,satelliteTiles=null;
 function setMapStyle(style){if(!liveMap)return;mapStyle=style;const next=style==='satellite'?satelliteTiles:streetTiles,other=style==='satellite'?streetTiles:satelliteTiles;if(other&&liveMap.hasLayer(other))liveMap.removeLayer(other);if(next&&!liveMap.hasLayer(next))next.addTo(liveMap);$('mapStyleToggle').textContent=style==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=style==='satellite'?'LIVE MAP · SATELLITE':'OUTDOOR MAP · LIGHT';data.mapStyle=style;save()}
 function initLiveMap(){if(liveMap||!window.L)return;liveMap=L.map('liveMap',{zoomControl:true}).setView([20,0],2);streetTiles=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{subdomains:['a','b','c'],maxZoom:19,crossOrigin:true,attribution:'&copy; OpenStreetMap contributors &copy; CyclOSM'});satelliteTiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:true,attribution:'Tiles &copy; Esri'});(mapStyle==='satellite'?satelliteTiles:streetTiles).addTo(liveMap);routeLayer=L.polyline([],{color:'#36b98e',weight:5,opacity:.95}).addTo(liveMap);$('mapStyleToggle').textContent=mapStyle==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=mapStyle==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';$('mapStyleToggle').onclick=()=>setMapStyle(mapStyle==='street'?'satellite':'street');setTimeout(()=>liveMap.invalidateSize(),250);}
-const localDayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-if(!data.waterDate)data.waterDate=localDayKey();else if(data.waterDate!==localDayKey()){day.water=0;data.waterDate=localDayKey()}
-const save=()=>{data.days[todayKey]=day;data.waterDate=data.waterDate||localDayKey();data.fasting=fasting;data.fastStart=fastStart;data.fastTarget=fastTarget;localStorage.setItem(key,JSON.stringify(data))};
+if(!data.waterResetToZeroV1){day.water=0;data.waterResetToZeroV1=true;}
+if(data.waterDate!==localDayKey()){day.water=0;data.waterDate=localDayKey()}
+const save=()=>{data.days[todayKey]=day;data.waterDate=localDayKey();data.fasting=fasting;data.fastStart=fastStart;data.fastTarget=fastTarget;localStorage.setItem(key,JSON.stringify(data))};
 function toast(s){$('toast').textContent=s;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2100)}
 function fmt(sec){let h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=Math.floor(sec%60);return [h,m,s].map(x=>String(x).padStart(2,'0')).join(':')}
 function render(){ $('steps').innerHTML=day.steps.toLocaleString()+' <span class="metric-unit">steps</span>';$('stepbar').style.width=Math.min(100,day.steps/7000*100)+'%';$('burned').innerHTML=day.burned.toLocaleString()+' <span class="metric-unit">kcal</span>';$('burnbar').style.width=Math.min(100,day.burned/500*100)+'%';$('waterCount').innerHTML=day.water+' <span class="metric-unit">glasses</span>';$('waterText').textContent=day.water+' / 8 glasses';$('waterbar').style.width=Math.min(100,day.water/8*100)+'%';let eaten=day.food.reduce((a,b)=>a+b.cal,0);$('eaten').innerHTML=eaten+' <span class="metric-unit">kcal</span>';$('foodList').textContent=day.food.length?day.food.map(x=>x.name+' · '+x.cal+' kcal').join('  /  '):'No meals logged today';renderWeek();save()}

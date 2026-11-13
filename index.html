@@ -121,7 +121,55 @@ function stopAndSave(){if(active){active=false;elapsed+=(Date.now()-startedAt)/1
 $('resetActivity').onclick=stopAndSave;
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{historyPeriod=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderHistory()});
 function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(now);if(historyPeriod==='day')start.setHours(0,0,0,0);else if(historyPeriod==='week'){start.setHours(0,0,0,0);start.setDate(start.getDate()-((start.getDay()+6)%7))}else{start.setHours(0,0,0,0);start.setDate(1)}let h=all.filter(x=>{let t=x.timestamp?new Date(x.timestamp):new Date(x.date);return !isNaN(t)&&t>=start&&t<=now});$('history').innerHTML=h.length?h.map(x=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5f0eb"><div><b style="font-size:12px">'+x.mode+'</b><div class="tiny">'+x.date+'</div></div><div style="text-align:right;font-size:11px"><b>'+Number(x.distance||0).toFixed(2)+' km</b><div class="tiny">'+fmt(x.duration||0).slice(0,5)+' · '+(x.kcal||0)+' kcal</div></div></div>').join(''):'<div class="tiny">No activities in this '+historyPeriod+'.</div>';$('history').insertAdjacentHTML('beforeend','<div class="tiny" style="padding-top:8px">'+h.length+' activities · '+h.reduce((a,x)=>a+Number(x.distance||0),0).toFixed(2)+' km total</div>')}
-$('exportRoute').onclick=async()=>{let route=coords.length?coords:(data.history||[])[0]?.coords||[];let routeMode=coords.length?mode:(data.history||[])[0]?.mode||'Activity';if(!route.length){toast('اول یک فعالیت GPS ثبت کن');return}let pts=route.map(c=>'<trkpt lat="'+c.lat+'" lon="'+c.lon+'"><time>'+new Date(c.time).toISOString()+'</time></trkpt>').join('');let gpx='<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="M FIT" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>M FIT '+routeMode+'</name><trkseg>'+pts+'</trkseg></trk></gpx>';let file=new File([gpx],'mfit-route.gpx',{type:'application/gpx+xml'});try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:'M FIT route',files:[file]});toast('Route shared')}else{let a=document.createElement('a');a.href=URL.createObjectURL(file);a.download='mfit-route.gpx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500);toast('GPX downloaded')}}catch(e){if(e.name!=='AbortError')toast('اشتراک‌گذاری انجام نشد؛ دوباره تلاش کن')}};
+ function routeImageBlob(route,stats){
+  return new Promise((resolve,reject)=>{
+   const canvas=document.createElement('canvas');canvas.width=1200;canvas.height=1500;
+   const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Canvas unavailable'));return}
+   const bg=ctx.createLinearGradient(0,0,1200,1500);bg.addColorStop(0,'#e9fff5');bg.addColorStop(1,'#e8f3ff');ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);
+   ctx.fillStyle='#ffffff';ctx.globalAlpha=.72;ctx.beginPath();ctx.roundRect(55,55,1090,1390,54);ctx.fill();ctx.globalAlpha=1;
+   ctx.fillStyle='#183e35';ctx.font='700 54px system-ui';ctx.fillText('M FIT',105,155);
+   ctx.fillStyle='#6b8c81';ctx.font='500 26px system-ui';ctx.fillText('YOUR ACTIVITY ROUTE',105,205);
+   const box={x:105,y:270,w:990,h:760};
+   ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();
+   ctx.fillStyle='#e5f0e9';ctx.fillRect(box.x,box.y,box.w,box.h);
+   ctx.strokeStyle='#c8dcd1';ctx.lineWidth=13;ctx.lineCap='round';
+   for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(box.x-80,box.y+80+i*125);ctx.bezierCurveTo(box.x+250,box.y+20+i*145,box.x+620,box.y+180+i*95,box.x+1070,box.y+30+i*120);ctx.stroke()}
+   ctx.strokeStyle='#d4e4dc';ctx.lineWidth=7;
+   for(let i=0;i<6;i++){ctx.beginPath();ctx.moveTo(box.x+80+i*170,box.y-50);ctx.bezierCurveTo(box.x+20+i*180,box.y+240,box.x+230+i*120,box.y+500,box.x+90+i*170,box.y+820);ctx.stroke()}
+   if(route.length){
+    const lons=route.map(p=>Number(p.lon)),lats=route.map(p=>Number(p.lat));
+    const minLon=Math.min(...lons),maxLon=Math.max(...lons),minLat=Math.min(...lats),maxLat=Math.max(...lats);
+    const spanLon=Math.max(maxLon-minLon,0.00005),spanLat=Math.max(maxLat-minLat,0.00005),pad=105;
+    const scale=Math.min((box.w-2*pad)/spanLon,(box.h-2*pad)/spanLat);
+    const ox=box.x+(box.w-spanLon*scale)/2,oy=box.y+(box.h-spanLat*scale)/2;
+    const pts=route.map(p=>({x:ox+(Number(p.lon)-minLon)*scale,y:box.y+box.h-(oy-box.y+(Number(p.lat)-minLat)*scale)}));
+    ctx.shadowColor='#168e6b55';ctx.shadowBlur=22;ctx.strokeStyle='#fff';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+    ctx.shadowBlur=0;ctx.strokeStyle='#20a879';ctx.lineWidth=15;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();
+    for(const [p,color] of [[pts[0],'#168e6b'],[pts[pts.length-1],'#f08a55']]){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.fill()}
+   }
+   ctx.restore();
+   ctx.fillStyle='#183e35';ctx.font='700 48px system-ui';ctx.fillText(stats.mode,105,1130);
+   const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['CALORIES',stats.kcal+' kcal']];
+   metrics.forEach((m,i)=>{const x=105+i*345;ctx.fillStyle='#eaf5ef';ctx.beginPath();ctx.roundRect(x,1180,310,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='600 22px system-ui';ctx.fillText(m[0],x+25,1225);ctx.fillStyle='#183e35';ctx.font='700 36px system-ui';ctx.fillText(m[1],x+25,1285)});
+   ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(new Date().toLocaleDateString(),105,1380);
+   canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
+  });
+ }
+ function downloadRouteImage(file){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='mfit-route.png';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},15000);toast('عکس مسیر در پوشه Downloads ذخیره شد')}
+ $('exportRoute').onclick=async()=>{
+  const saved=(data.history||[])[0],route=coords.length?coords:(saved?.coords||[]);
+  if(!route.length){toast('اول یک فعالیت GPS ثبت کن و ذخیره‌اش کن');return}
+  const modeName=coords.length?mode:(saved?.mode||'Activity'),km=coords.length?distance:Number(saved?.distance||0),seconds=coords.length?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=Math.round(km*(modeName==='Run'?65:modeName==='Ride'?28:45));
+  try{
+   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal});
+   const file=new File([blob],'mfit-route.png',{type:'image/png'});
+   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({title:'M FIT route',text:'مسیر فعالیت من در M FIT',files:[file]});toast('عکس مسیر برای اشتراک‌گذاری ارسال شد');return}
+    catch(e){if(e.name==='AbortError'){toast('اشتراک‌گذاری لغو شد');return}}
+   }
+   downloadRouteImage(file);
+  }catch(e){toast('ساخت عکس مسیر ناموفق بود؛ دوباره تلاش کن')}
+ };
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 render();renderHistory();updateFast();setInterval(updateFast,1000);
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

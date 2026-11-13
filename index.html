@@ -154,4 +154,63 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 render();renderHistory();updateFast();setInterval(updateFast,1000);
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+
+</script>
+<script>
+(function(){
+ const $=id=>document.getElementById(id);
+ const storeKey='mfit-fast-timer-v2';
+ let state={fasting:false,start:0,target:16};
+ try{
+  const saved=JSON.parse(localStorage.getItem(storeKey)||'null');
+  if(saved&&typeof saved==='object') state={...state,...saved};
+  else {
+   const legacy=JSON.parse(localStorage.getItem('mfit-v1')||'{}');
+   if(legacy.fasting&&Number(legacy.fastStart)>0){
+    state.fasting=true;state.start=Number(legacy.fastStart);state.target=Number(legacy.fastTarget)||16;
+   }
+  }
+ }catch(e){}
+ const save=()=>{try{localStorage.setItem(storeKey,JSON.stringify(state))}catch(e){}};
+ const fmt=n=>{n=Math.max(0,Math.floor(n));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(v=>String(v).padStart(2,'0')).join(':')};
+ function paint(){
+  const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours');
+  if(!clock||!status||!bar||!remaining||!toggle||!hours)return;
+  const goal=state.target*3600000;
+  if(state.fasting&&state.start>0){
+   const elapsed=Math.max(0,Date.now()-state.start),left=Math.max(0,goal-elapsed),pct=Math.min(100,elapsed/goal*100);
+   clock.textContent=fmt(elapsed/1000);
+   status.textContent=state.target+'-hour target · '+Math.floor(pct)+'% complete';
+   bar.style.width=pct+'%';
+   remaining.textContent=left>0?'Time remaining · '+fmt(left/1000):'Target reached · fast still running';
+   toggle.textContent='END FAST';hours.disabled=true;
+  }else{
+   state.fasting=false;state.start=0;
+   clock.textContent='00:00:00';status.textContent='Ready · '+state.target+'-hour target';
+   bar.style.width='0%';remaining.textContent='Time remaining · '+fmt(goal/1000);
+   toggle.textContent='START FAST';hours.disabled=false;
+  }
+ }
+ const hours=$('fastHours');
+ if(hours){
+  hours.value=String(Math.max(1,Math.min(24,Number(state.target)||16)));
+  hours.addEventListener('change',()=>{
+   if(state.fasting)return;
+   state.target=Math.max(1,Math.min(24,Number(hours.value)||16));
+   hours.value=String(state.target);save();paint();
+  });
+ }
+ const toggle=$('fastToggle');
+ if(toggle){
+  toggle.addEventListener('click',e=>{
+   e.preventDefault();e.stopImmediatePropagation();
+   if(state.fasting){state.fasting=false;state.start=0}
+   else{state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));state.start=Date.now();state.fasting=true}
+   save();paint();
+   const toast=$('toast');if(toast){toast.textContent=state.fasting?'Fasting timer started':'Fasting session ended';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
+  },true);
+ }
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden){paint();save()}});
+ paint();setInterval(paint,1000);
+})();
 </script></body></html>

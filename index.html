@@ -29,7 +29,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <div class="hero"><div class="eyebrow">DAILY READINESS</div><div class="readiness" style="margin-top:13px"><div class="ring"><strong>86</strong><small>READY</small></div><div><h2>You're doing great</h2><p>Small consistent actions build lasting progress. Keep your rhythm today.</p></div></div></div>
 <div class="section-head"><h3>Daily overview</h3><span class="tiny">LIVE TRACKING</span></div>
 <div class="grid2">
-<div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div class="food-row"><input id="stepInput" type="number" min="0" placeholder="Add steps"><button class="pill" id="addSteps">+</button></div></div>
+<div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div class="food-row"><input id="stepInput" type="number" min="0" placeholder="Add steps"><button class="pill" id="addSteps">+</button></div><button class="pill secondary" id="motionToggle" style="margin-top:9px;width:100%">ENABLE MOTION SENSOR</button><div class="tiny" id="motionStatus" style="margin-top:7px">Motion sensor is off</div></div>
 <div class="glass"><div class="metric-top"><span class="metric-icon">✧</span><span class="tiny">ESTIMATE</span></div><div class="metric-label">Calories burned</div><div class="metric-value" id="burned">0 <span class="metric-unit">kcal</span></div><div class="progress"><i id="burnbar" style="width:0%"></i></div><div class="metric-label">Activity-based estimate</div></div>
 </div>
 <div class="glass fast-card"><div><div class="eyebrow">FASTING WINDOW · 16:8</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Ready when you are</div></div><button class="pill" id="fastToggle">START FAST</button></div>
@@ -70,6 +70,42 @@ function updateFast(){if(fasting){let s=Math.floor((Date.now()-fastStart)/1000);
 $('fastToggle').onclick=()=>{fasting=!fasting;fastStart=fasting?Date.now():0;updateFast();save();toast(fasting?'Fasting timer started':'Fasting session ended')};
 $('addWater').onclick=()=>{day.water=Math.min(40,day.water+1);render()};
 $('addSteps').onclick=()=>{let n=Math.max(0,Number($('stepInput').value)||0);day.steps+=n;$('stepInput').value='';render();toast('Steps added')};
+let motionOn=false,lastStepAt=0,wasRising=false,peak=0;
+async function enableMotion(){
+ try{
+  if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';toast('Motion sensor unavailable');return}
+  if(typeof DeviceMotionEvent.requestPermission==='function'){
+   const permission=await DeviceMotionEvent.requestPermission();
+   if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
+  }
+  if(motionOn)return;
+  motionOn=true;peak=0;wasRising=false;
+  window.addEventListener('devicemotion',onMotion);
+  $('motionToggle').textContent='STOP MOTION SENSOR';
+  $('motionStatus').textContent='Sensor active · walk with your phone';
+  toast('Motion sensor enabled');
+ }catch(e){$('motionStatus').textContent='Could not access motion sensor';toast('Check browser sensor permission')}
+}
+function onMotion(e){
+ if(!motionOn)return;
+ const a=e.accelerationIncludingGravity||e.acceleration;
+ if(!a||a.x==null||a.y==null||a.z==null)return;
+ const magnitude=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
+ const signal=Math.abs(magnitude-9.81);
+ if(signal>1.35){wasRising=true;peak=Math.max(peak,signal)}
+ else if(wasRising&&signal<0.75){
+  const now=Date.now();
+  if(peak>1.7&&now-lastStepAt>300){
+   day.steps++;lastStepAt=now;render();
+   $('motionStatus').textContent='Sensor active · '+day.steps.toLocaleString()+' steps today';
+  }
+  wasRising=false;peak=0;
+ }
+}
+$('motionToggle').onclick=()=>{
+ if(motionOn){motionOn=false;window.removeEventListener('devicemotion',onMotion);$('motionToggle').textContent='ENABLE MOTION SENSOR';$('motionStatus').textContent='Motion sensor paused';}
+ else enableMotion();
+};
 $('addFood').onclick=()=>{let name=$('foodName').value.trim(),cal=Math.max(0,Number($('foodCal').value)||0);if(!name||!cal){toast('Enter food and calories');return}day.food.push({name,cal});$('foodName').value='';$('foodCal').value='';render()};
 function showTab(tab){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!==tab));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('indicator').classList.toggle('right',tab==='sport');$('indicator').style.transform=tab==='sport'?'translateX(100%)':'';document.querySelector('.app').scrollTo?.({top:0,behavior:'smooth'})}
 document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));

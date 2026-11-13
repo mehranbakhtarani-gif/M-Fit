@@ -1,0 +1,7 @@
+name = "m-fit-food-ai"
+main = "src/index.js"
+compatibility_date = "2026-11-14"
+
+[vars]
+OPENAI_MODEL = "gpt-6-astra"
+ALLOWED_ORIGIN = "https://mehranbakhtarani-gif.github.io"

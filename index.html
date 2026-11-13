@@ -32,7 +32,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div class="food-row"><input id="stepInput" type="number" min="0" placeholder="Add steps"><button class="pill" id="addSteps">+</button></div><button class="pill secondary" id="motionToggle" style="margin-top:9px;width:100%">ENABLE MOTION SENSOR</button><div class="tiny" id="motionStatus" style="margin-top:7px">Motion sensor is off</div></div>
 <div class="glass"><div class="metric-top"><span class="metric-icon">✧</span><span class="tiny">ESTIMATE</span></div><div class="metric-label">Calories burned</div><div class="metric-value" id="burned">0 <span class="metric-unit">kcal</span></div><div class="progress"><i id="burnbar" style="width:0%"></i></div><div class="metric-label">Activity-based estimate</div></div>
 </div>
-<div class="glass fast-card"><div style="min-width:0"><div class="eyebrow">FASTING TIMER</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Choose your target duration</div><div class="progress" style="margin-top:12px;height:9px"><i id="fastProgress" style="width:0%"></i></div><div class="tiny" id="fastRemaining" style="margin-top:7px">Time remaining · --:--:--</div><label class="tiny" for="fastHours">TARGET HOURS</label><input id="fastHours" class="number-input" type="number" min="1" max="24" step="1" value="16" style="width:78px;padding:7px;margin-top:5px"></div><button class="pill" id="fastToggle">START FAST</button></div>
+<div class="glass fast-card"><div style="min-width:0"><div class="eyebrow">FASTING TIMER</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Choose your target duration</div><div class="progress" style="margin-top:12px;height:9px"><i id="fastProgress" style="width:0%"></i></div><div class="tiny" id="fastRemaining" style="margin-top:7px">Time remaining · --:--:--</div><label class="tiny" for="fastHours">TARGET HOURS</label><input id="fastHours" class="number-input" type="number" min="1" max="24" step="1" value="16" style="width:78px;padding:7px;margin-top:5px"><div style="margin-top:8px"><button class="pill secondary" id="fastNotify" type="button" style="padding:6px 10px;font-size:10px">♧ ENABLE NOTIFICATIONS</button></div></div><button class="pill" id="fastToggle">START FAST</button></div>
 <div class="section-head"><h3>Hydration</h3><span class="tiny" id="waterText">0 / 8 glasses</span></div>
 <div class="glass"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="metric-value" id="waterCount">0 <span class="metric-unit">glasses</span></div><div class="tiny">A little more, a little better</div></div><div style="display:flex;align-items:center;gap:8px"><button class="pill" id="addWater">＋ ADD WATER</button><button class="water-reset" id="resetWater" type="button" aria-label="Reset hydration" title="Reset hydration">↻</button></div></div><div class="progress"><i id="waterbar" style="width:0%"></i></div></div>
 <div class="section-head"><h3>Calories consumed</h3><span class="tiny">FOOD LOG</span></div>
@@ -211,6 +211,24 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    if(state.fasting)return;
    state.target=Math.max(1,Math.min(24,Number(hours.value)||16));
    hours.value=String(state.target);save();paint();
+  });
+ }
+ const notify=$('fastNotify');
+ if(notify){
+  const refreshNotify=()=>{
+   if(!('Notification' in window)){notify.textContent='ALERTS NOT SUPPORTED';notify.disabled=true;return}
+   notify.textContent=Notification.permission==='granted'?'✓ NOTIFICATIONS ON':Notification.permission==='denied'?'NOTIFICATIONS BLOCKED':'♧ ENABLE NOTIFICATIONS';
+  };
+  refreshNotify();
+  notify.addEventListener('click',async()=>{
+   if(!('Notification' in window)){refreshNotify();return}
+   if(Notification.permission==='granted'){if(typeof toastMessage==='function')toastMessage('Notifications are already enabled');else{const t=$('toast');if(t){t.textContent='Notifications are already enabled';t.classList.add('show')}}return}
+   if(Notification.permission==='denied'){const t=$('toast');if(t){t.textContent='Enable notifications in browser settings';t.classList.add('show')}return}
+   try{
+    const permission=await Notification.requestPermission();
+    refreshNotify();
+    const t=$('toast');if(t){t.textContent=permission==='granted'?'Fasting notifications enabled': 'Notification permission not granted';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+   }catch(e){const t=$('toast');if(t){t.textContent='Could not enable notifications';t.classList.add('show')}}
   });
  }
  const toggle=$('fastToggle');

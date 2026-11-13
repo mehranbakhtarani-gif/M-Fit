@@ -160,7 +160,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
 (function(){
  const $=id=>document.getElementById(id);
  const storeKey='mfit-fast-timer-v2';
- let state={fasting:false,start:0,target:16};
+ let state={fasting:false,start:0,target:16,completed:false};
  try{
   const saved=JSON.parse(localStorage.getItem(storeKey)||'null');
   if(saved&&typeof saved==='object') state={...state,...saved};
@@ -180,12 +180,25 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
   if(state.fasting&&state.start>0){
    const elapsed=Math.max(0,Date.now()-state.start),left=Math.max(0,goal-elapsed),pct=Math.min(100,elapsed/goal*100);
    clock.textContent=fmt(elapsed/1000);
-   status.textContent=state.target+'-hour target · '+Math.floor(pct)+'% complete';
    bar.style.width=pct+'%';
-   remaining.textContent=left>0?'Time remaining · '+fmt(left/1000):'Target reached · fast still running';
    toggle.textContent='END FAST';hours.disabled=true;
+   if(left<=0){
+    remaining.textContent='Fasting time finished';
+    status.textContent='FASTING COMPLETE';
+    if(!state.completed){
+     state.completed=true;save();
+     const message='Fasting time finished';
+     const toast=$('toast');if(toast){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),4500)}
+     if('Notification' in window&&Notification.permission==='granted'){
+      try{new Notification('M FIT',{body:message,tag:'mfit-fast-finished'})}catch(e){}
+     }
+    }
+   }else{
+    status.textContent=state.target+'-hour target · '+Math.floor(pct)+'% complete';
+    remaining.textContent='Time remaining · '+fmt(left/1000);
+   }
   }else{
-   state.fasting=false;state.start=0;
+   state.fasting=false;state.start=0;state.completed=false;
    clock.textContent='00:00:00';status.textContent='Ready · '+state.target+'-hour target';
    bar.style.width='0%';remaining.textContent='Time remaining · '+fmt(goal/1000);
    toggle.textContent='START FAST';hours.disabled=false;
@@ -204,8 +217,14 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  if(toggle){
   toggle.addEventListener('click',e=>{
    e.preventDefault();e.stopImmediatePropagation();
-   if(state.fasting){state.fasting=false;state.start=0}
-   else{state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));state.start=Date.now();state.fasting=true}
+   if(state.fasting){state.fasting=false;state.start=0;state.completed=false}
+   else{
+    state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));
+    state.start=Date.now();state.fasting=true;state.completed=false;
+    if('Notification' in window&&Notification.permission==='default'){
+     try{Notification.requestPermission()}catch(e){}
+    }
+   }
    save();paint();
    const toast=$('toast');if(toast){toast.textContent=state.fasting?'Fasting timer started':'Fasting session ended';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
   },true);

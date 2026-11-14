@@ -29,7 +29,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <div class="hero"><div class="eyebrow">DAILY READINESS</div><div class="readiness" style="margin-top:13px"><div class="ring"><strong>86</strong><small>READY</small></div><div><h2>You're doing great</h2><p>Small consistent actions build lasting progress. Keep your rhythm today.</p></div></div></div>
 <div class="section-head"><h3>Daily overview</h3><span class="tiny">LIVE TRACKING</span></div>
 <div class="grid2">
-<div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div class="tiny" id="motionStatus" style="margin-top:7px">Motion sensor starts with an activity</div></div>
+<div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px"><div class="tiny" id="motionStatus">Always-on step counter · initializing</div><button class="pill" id="resetSteps" type="button" style="padding:6px 10px;font-size:10px;border-color:#f0c7d0;color:#b94b64">RESET</button></div></div>
 <div class="glass"><div class="metric-top"><span class="metric-icon">✧</span><span class="tiny">ESTIMATE</span></div><div class="metric-label">Calories burned</div><div class="metric-value" id="burned">0 <span class="metric-unit">kcal</span></div><div class="progress"><i id="burnbar" style="width:0%"></i></div><div class="metric-label">Activity-based estimate</div></div>
 </div>
 <div class="glass fast-card"><div style="min-width:0"><div class="eyebrow">FASTING TIMER</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Choose your target duration</div><div class="progress" style="margin-top:12px;height:9px"><i id="fastProgress" style="width:0%"></i></div><div class="tiny" id="fastRemaining" style="margin-top:7px">Time remaining · --:--:--</div><label class="tiny" for="fastHours">TARGET HOURS</label><input id="fastHours" class="number-input" type="number" min="1" max="24" step="1" value="16" style="width:78px;padding:7px;margin-top:5px"><div style="margin-top:8px"><button class="pill secondary" id="fastNotify" type="button" style="padding:6px 10px;font-size:10px">♧ ENABLE NOTIFICATIONS</button></div></div><button class="pill" id="fastToggle">START FAST</button></div>
@@ -105,17 +105,18 @@ function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
 let motionOn=false,lastStepAt=0,wasRising=false,peak=0;
-async function enableMotion(){
+async function enableMotion(fromUserGesture=false){
  try{
-  if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';toast('Motion sensor unavailable');return}
+  if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';return}
+  if(motionOn)return;
   if(typeof DeviceMotionEvent.requestPermission==='function'){
+   if(!fromUserGesture){$('motionStatus').textContent='Tap START ACTIVITY once to grant motion permission';return}
    const permission=await DeviceMotionEvent.requestPermission();
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
   }
-  if(motionOn)return;
   motionOn=true;peak=0;wasRising=false;
   window.addEventListener('devicemotion',onMotion);
-  $('motionStatus').textContent='Sensor active · walk with your phone';
+  $('motionStatus').textContent='Step counter active · works outside activities';
  }catch(e){$('motionStatus').textContent='Could not access motion sensor';toast('Check browser sensor permission')}
 }
 function onMotion(e){
@@ -129,7 +130,7 @@ function onMotion(e){
   const now=Date.now();
   if(peak>1.7&&now-lastStepAt>300){
    day.steps++;lastStepAt=now;render();
-   $('motionStatus').textContent='Sensor active · '+day.steps.toLocaleString()+' steps today';
+   $('motionStatus').textContent='Step counter active · '+day.steps.toLocaleString()+' steps today';
   }
   wasRising=false;peak=0;
  }
@@ -137,7 +138,7 @@ function onMotion(e){
 function disableMotion(){
  if(!motionOn)return;
  motionOn=false;window.removeEventListener('devicemotion',onMotion);
- $('motionStatus').textContent='Motion sensor paused';
+ $('motionStatus').textContent='Step counter paused';
 }
 $('addFood').onclick=()=>{let name=$('foodName').value.trim(),cal=Math.max(0,Number($('foodCal').value)||0);if(!name||!cal){toast('Enter food and calories');return}day.food.push({name,cal});$('foodName').value='';$('foodCal').value='';render()};
 let pendingFoodAi=null;
@@ -206,8 +207,8 @@ const hav=(a,b)=>{let R=6371000,p=Math.PI/180,d1=(b.lat-a.lat)*p,d2=(b.lon-a.lon
 function gpsStart(){if(!navigator.geolocation){$('gpsStatus').textContent='GPS UNAVAILABLE';toast('GPS در این مرورگر در دسترس نیست');return}if(!window.isSecureContext){$('gpsStatus').textContent='HTTPS REQUIRED';toast('برای GPS باید نسخه HTTPS را باز کنی');return}initLiveMap();$('gpsStatus').textContent='WAITING FOR GPS';watchId=navigator.geolocation.watchPosition(pos=>{let c={lat:pos.coords.latitude,lon:pos.coords.longitude,time:Date.now()};if(coords.length){let d=hav(coords[coords.length-1],c);if(d<100)distance+=d/1000}coords.push(c);$('gpsStatus').textContent='GPS CONNECTED';$('mapBadge').textContent='GPS RECORDING';$('mapNote').textContent='موقعیت واقعی · '+coords.length+' نقطه ثبت شده';if(liveMap){let ll=[c.lat,c.lon];routeLayer.addLatLng(ll);if(!currentMarker)currentMarker=L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#24ad82',fillOpacity:1}).addTo(liveMap);else currentMarker.setLatLng(ll);if(coords.length===1)liveMap.setView(ll,16);else liveMap.panTo(ll,{animate:true,duration:.35})}renderActivity()},err=>{$('gpsStatus').textContent='GPS ERROR';$('mapNote').textContent='دسترسی GPS برقرار نشد؛ مجوز مکان‌یابی را بررسی کن';toast(err.message)}, {enableHighAccuracy:true,maximumAge:1000,timeout:20000})}
 function estimateActivityCalories(activityMode,km,seconds){if(km<=0||seconds<=0)return 0;const speed=km/(seconds/3600),baseSpeed=activityMode==='Run'?9:activityMode==='Ride'?20:5,baseKcalPerKm=activityMode==='Run'?65:activityMode==='Ride'?28:45;const speedFactor=Math.max(.7,Math.min(1.5,Math.sqrt(Math.max(.1,speed)/baseSpeed)));return Math.round(km*baseKcalPerKm*speedFactor)}
 function renderActivity(){let sec=elapsed+(active?(Date.now()-startedAt)/1000:0);$('distance').textContent=distance.toFixed(2);$('duration').textContent=fmt(sec);$('avgSpeed').textContent=sec>0?(distance/(sec/3600)).toFixed(1):'0.0';let kcal=estimateActivityCalories(mode,distance,sec);$('sportCal').textContent=kcal;$('activityToggle').textContent=active?'PAUSE ACTIVITY':(sec>0?'RESUME ACTIVITY':'START ACTIVITY')}
-$('activityToggle').onclick=()=>{if(!active){active=true;startedAt=Date.now();enableMotion();if(watchId===null)gpsStart();activityTimer=setInterval(renderActivity,250);$('mapNote').textContent='Recording GPS route…'}else{active=false;disableMotion();elapsed+=(Date.now()-startedAt)/1000;clearInterval(activityTimer);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;$('gpsStatus').textContent='GPS PAUSED'}renderActivity()};
-function stopAndSave(){if(active){active=false;disableMotion();elapsed+=(Date.now()-startedAt)/1000;clearInterval(activityTimer);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null}if(elapsed>0||coords.length){let item={mode,distance:+distance.toFixed(2),duration:Math.round(elapsed),timestamp:Date.now(),date:new Date().toLocaleString(),kcal:estimateActivityCalories(mode,distance,elapsed),coords};data.history=data.history||[];data.history.unshift(item);data.history=data.history.slice(0,15);day.burned+=item.kcal;if(mode!=='Ride')day.steps+=Math.round(item.distance*(mode==='Run'?1350:1250));renderHistory();save();toast('Activity saved on this device')}elapsed=0;startedAt=0;coords=[];distance=0;if(routeLayer)routeLayer.setLatLngs([]);if(currentMarker&&liveMap){liveMap.removeLayer(currentMarker);currentMarker=null}$('gpsStatus').textContent='GPS NOT STARTED';$('mapBadge').textContent='LIVE MAP · OPENSTREETMAP';$('mapNote').textContent='برای شروع، فعالیت را بزن و اجازهٔ GPS بده';renderActivity()}
+$('activityToggle').onclick=()=>{if(!active){active=true;startedAt=Date.now();enableMotion(true);if(watchId===null)gpsStart();activityTimer=setInterval(renderActivity,250);$('mapNote').textContent='Recording GPS route…'}else{active=false;elapsed+=(Date.now()-startedAt)/1000;clearInterval(activityTimer);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null;$('gpsStatus').textContent='GPS PAUSED'}renderActivity()};
+function stopAndSave(){if(active){active=false;elapsed+=(Date.now()-startedAt)/1000;clearInterval(activityTimer);if(watchId!==null)navigator.geolocation.clearWatch(watchId);watchId=null}if(elapsed>0||coords.length){let item={mode,distance:+distance.toFixed(2),duration:Math.round(elapsed),timestamp:Date.now(),date:new Date().toLocaleString(),kcal:estimateActivityCalories(mode,distance,elapsed),coords};data.history=data.history||[];data.history.unshift(item);data.history=data.history.slice(0,15);day.burned+=item.kcal;renderHistory();save();toast('Activity saved on this device')}elapsed=0;startedAt=0;coords=[];distance=0;if(routeLayer)routeLayer.setLatLngs([]);if(currentMarker&&liveMap){liveMap.removeLayer(currentMarker);currentMarker=null}$('gpsStatus').textContent='GPS NOT STARTED';$('mapBadge').textContent='LIVE MAP · OPENSTREETMAP';$('mapNote').textContent='برای شروع، فعالیت را بزن و اجازهٔ GPS بده';renderActivity()}
 $('resetActivity').onclick=stopAndSave;
 document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{historyPeriod=b.dataset.period;document.querySelectorAll('[data-period]').forEach(x=>x.classList.toggle('active',x===b));renderHistory()});
 function clearActivityHistory(){const count=(data.history||[]).length;if(!count){toast('No activity history to clear');return}if(!confirm('Delete all saved activity history on this device? This cannot be undone.'))return;data.history=[];save();renderHistory();render();toast('Activity history cleared')}
@@ -243,7 +244,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
   }catch(e){toast('ساخت عکس مسیر ناموفق بود؛ دوباره تلاش کن')}
  };
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
-render();renderHistory();updateFast();setInterval(updateFast,1000);
+render();renderHistory();enableMotion(false);$('resetSteps').onclick=()=>{if(!day.steps){toast('Step count is already zero');return}if(!confirm('Reset today’s step count to zero?'))return;day.steps=0;render();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset')};updateFast();setInterval(updateFast,1000);
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 </script>

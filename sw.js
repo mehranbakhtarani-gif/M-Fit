@@ -1,4 +1,4 @@
-const CACHE='mfit-shell-v53';
+const CACHE='mfit-shell-v54';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil((async()=>{

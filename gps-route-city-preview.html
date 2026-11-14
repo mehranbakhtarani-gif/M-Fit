@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#eef8f4"><title>M FIT · GPS Route City Preview</title>
+<link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+:root{--ink:#173d39;--muted:#76928a;--mint:#20bd91;--glass:rgba(255,255,255,.78)}
+*{box-sizing:border-box}body{margin:0;padding:15px;background:radial-gradient(ellipse at 8% 4%,#d4f4e6 0,transparent 35%),radial-gradient(ellipse at 95% 12%,#dbeaff 0,transparent 36%),linear-gradient(145deg,#f8fcfa,#edf5fb);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+.shell{width:min(680px,100%);margin:auto}.head{display:flex;justify-content:space-between;align-items:center;padding:8px 3px 15px}.brand{font-size:14px;font-weight:950;letter-spacing:.2em;direction:ltr}.brand span{color:#25b98d}.tag{font-size:9px;font-weight:900;letter-spacing:.1em;color:#397c68;background:#ffffffb5;border:1px solid #fff;padding:8px 11px;border-radius:99px}
+h1{font-size:27px;letter-spacing:-.05em;margin:0 0 5px;font-weight:950}.sub{font-size:12px;color:var(--muted);line-height:1.9;margin:0 0 15px}
+.map-card{position:relative;overflow:hidden;border-radius:29px;border:1px solid #ffffffed;box-shadow:0 22px 60px #6d9f8d30;background:#e2f0e8}.map{height:min(69vh,610px);min-height:440px;width:100%}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(165%);-webkit-backdrop-filter:blur(18px) saturate(165%);border:1px solid #ffffffed;box-shadow:0 8px 24px #315b4b20}
+.top-float{position:absolute;z-index:3;top:13px;left:13px;right:13px;display:flex;justify-content:space-between;align-items:flex-start;direction:ltr;pointer-events:none}.live{border-radius:15px;padding:10px 12px;font-size:9px;font-weight:950;letter-spacing:.1em}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#20bd91;margin-right:6px;box-shadow:0 0 0 4px #20bd9126}.weather{border-radius:15px;padding:8px 12px;text-align:right}.weather b{font-size:17px;display:block}.weather small{font-size:8px;color:var(--muted);font-weight:850;letter-spacing:.1em}
+.route-card{position:absolute;z-index:3;bottom:13px;left:13px;right:13px;padding:14px;border-radius:20px;direction:rtl}.route-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px}.route-head strong{font-size:12px}.route-head span{font-size:9px;color:#168e6d;font-weight:900;letter-spacing:.08em;direction:ltr}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{border-radius:13px;background:#f2faf6c9;padding:9px 8px;text-align:center}.stat b{display:block;font-size:19px;letter-spacing:-.04em}.stat small{font-size:9px;color:var(--muted);font-weight:800}
+.controls{display:flex;gap:8px;margin-top:12px;direction:ltr}.controls button{flex:1;padding:13px 7px;border-radius:15px;border:1px solid #ffffff;background:linear-gradient(135deg,#ffffffed,#def6eb);box-shadow:0 7px 18px #8ebfac33;color:#286555;font-size:10px;font-weight:950}.controls button:active{transform:scale(.98)}.note{text-align:center;font-size:10px;color:#809a92;margin:11px 8px 0;line-height:1.8}
+.start-pin,.finish-pin{width:17px;height:17px;border-radius:50%;border:4px solid white;box-shadow:0 3px 12px #164d3c66}.start-pin{background:#20bd91}.finish-pin{background:#ff8d71}.current-pin{width:18px;height:18px;border-radius:50%;background:#168dff;border:4px solid white;box-shadow:0 0 0 8px #168dff30,0 3px 12px #164d3c55}
+.maplibregl-ctrl-bottom-right{margin-bottom:142px}.maplibregl-ctrl-attrib{font-size:8px!important}
+@media(max-width:430px){body{padding:10px}.map{min-height:420px;height:67vh}.route-card{padding:11px}.stat b{font-size:17px}}
+</style></head>
+<body><main class="shell">
+<div class="head"><div class="brand">M <span>FIT</span></div><div class="tag">GPS ROUTE CITY · CONCEPT 04</div></div>
+<h1>مسیرت، روی نقشهٔ زندهٔ شهر.</h1>
+<p class="sub">نمای شهری سه‌بعدی با مسیر فیروزه‌ای برجسته، نقطهٔ شروع و پایان و کارت اطلاعات فعالیت؛ با حس یک اپ ورزشی مدرن.</p>
+<section class="map-card">
+<div id="map" class="map" aria-label="GPS route city preview"></div>
+<div class="top-float"><div class="glass live"><i class="dot"></i>ROUTE PREVIEW</div><div class="glass weather"><small>WEATHER · SAMPLE</small><b>☀ 22°</b></div></div>
+<div class="glass route-card"><div class="route-head"><strong>پیاده‌روی صبحگاهی</strong><span>● GPS TRACK</span></div><div class="stats"><div class="stat"><b>3.42 <small>km</small></b><small>مسافت</small></div><div class="stat"><b>38:24</b><small>زمان</small></div><div class="stat"><b>248</b><small>کالری</small></div></div></div>
+</section>
+<div class="controls"><button id="tilt">3D / TOP VIEW</button><button id="rotate">ROTATE 45°</button><button id="reset">RESET ROUTE</button></div>
+<p class="note">این پیش‌نمایش مستقل است؛ مسیر، شهر، آب‌وهوا و آمار نمایشی هستند و هنوز به GPS یا اطلاعات واقعی M FIT متصل نیستند.</p>
+</main>
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+<script>
+(()=>{const el=document.getElementById('map');if(!window.maplibregl)return;
+const center=[-73.9857,40.7484],coords=[[-73.9940,40.7530],[-73.9918,40.7517],[-73.9895,40.7510],[-73.9879,40.7491],[-73.9854,40.7480],[-73.9832,40.7465],[-73.9808,40.7456],[-73.9781,40.7440],[-73.9760,40.7428]];
+const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/bright',center:[-73.985,40.748],zoom:15.3,pitch:62,bearing:-34,antialias:true});
+map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true}),'bottom-right');
+map.on('load',()=>{
+try{
+map.addSource('mfit-buildings',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
+let before;for(const l of map.getStyle().layers){if(l.type==='symbol'&&l.layout&&l.layout['text-field']){before=l.id;break}}
+map.addLayer({id:'mfit-3d-buildings',source:'mfit-buildings','source-layer':'building',type:'fill-extrusion',minzoom:13,filter:['!=',['get','hide_3d'],true],paint:{'fill-extrusion-color':['match',['get','colour'],'#ffffff','#f7dfc9','#eeeeee','#d5e9e1','#f5d6b8','#f2c8a7','#d7e4f5','#b9cfee','#e7d9f4','#c8b9e9','#c9e8d9','#a9d9c4','#f4e4b7','#efd99b','#f0d3d7','#eabac6','#e8e5df','#d7d8d1','#f0cda8','#e7bd93','#c9dce8','#b8d1e0','#d7e7c9','#bdd8a8','#c7d7e7'],'fill-extrusion-height':['interpolate',['linear'],['zoom'],13,0,15,['coalesce',['get','render_height'],['get','height'],12]],'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],'fill-extrusion-opacity':.97}},before);
+const route={type:'Feature',geometry:{type:'LineString',coordinates:coords}};
+map.addSource('mfit-route',{type:'geojson',data:route});
+map.addLayer({id:'route-halo',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':15,'line-opacity':.98}});
+map.addLayer({id:'route-main',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#16c99a','line-width':7,'line-opacity':1}});
+const pins={type:'FeatureCollection',features:[{type:'Feature',properties:{kind:'start'},geometry:{type:'Point',coordinates:coords[0]}},{type:'Feature',properties:{kind:'finish'},geometry:{type:'Point',coordinates:coords[coords.length-1]}}]};
+map.addSource('route-pins',{type:'geojson',data:pins});
+map.addLayer({id:'route-pins-layer',type:'circle',source:'route-pins',paint:{'circle-radius':8,'circle-color':['match',['get','kind'],'start','#20bd91','#ff8d71'],'circle-stroke-color':'#fff','circle-stroke-width':3}});
+new maplibregl.Marker({element:Object.assign(document.createElement('div'),{className:'current-pin'})}).setLngLat(coords[5]).addTo(map);
+setTimeout(()=>map.resize(),200);
+}catch(e){console.warn('M FIT route preview',e)}
+});
+document.getElementById('tilt').onclick=()=>map.easeTo({pitch:map.getPitch()>20?0:62,duration:650});
+document.getElementById('rotate').onclick=()=>map.easeTo({bearing:map.getBearing()+45,duration:700});
+document.getElementById('reset').onclick=()=>map.easeTo({center:[-73.985,40.748],zoom:15.3,pitch:62,bearing:-34,duration:750});
+window.addEventListener('resize',()=>map.resize());
+})();
+</script></body></html>

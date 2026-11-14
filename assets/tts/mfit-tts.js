@@ -8,6 +8,8 @@
   let initPromise = null;
   let audioContext = null;
   let activeSource = null;
+  let gainNode = null;
+  let outputVolume = 0.75;
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -55,6 +57,8 @@
     const clean = String(text || '').trim().replace(/\u200c/g, ' ');
     if (!clean) return;
     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: tts.sampleRate });
+    if (!gainNode) { gainNode = audioContext.createGain(); gainNode.connect(audioContext.destination); }
+    gainNode.gain.setTargetAtTime(outputVolume, audioContext.currentTime, 0.035);
     await audioContext.resume();
     if (activeSource) {
       try { activeSource.stop(); } catch (_) {}
@@ -65,7 +69,7 @@
     buffer.copyToChannel(audio.samples, 0);
     const source = audioContext.createBufferSource();
     source.buffer = buffer;
-    source.connect(audioContext.destination);
+    source.connect(gainNode);
     activeSource = source;
     return new Promise(resolve => {
       source.onended = () => {
@@ -83,5 +87,10 @@
     }
   }
 
-  window.MfitWasmTTS = { ready, speak, stop };
+  function setVolume(value) {
+    outputVolume = Math.max(0, Math.min(1, Number(value) || 0));
+    if (gainNode && audioContext) gainNode.gain.setTargetAtTime(outputVolume, audioContext.currentTime, 0.035);
+  }
+
+  window.MfitWasmTTS = { ready, speak, stop, setVolume };
 })();

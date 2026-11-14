@@ -5,6 +5,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 const MfitMotion = registerPlugin('MfitMotion');
+const MfitIsland = registerPlugin('MfitIsland');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
@@ -123,4 +124,16 @@ window.MfitNativeMotion = {
     try { await MfitMotion.stop(); } catch (error) { /* Best-effort stop. */ }
     if (this.listener) { await this.listener.remove(); this.listener = null; }
   }
+};
+
+
+window.MfitWorkoutIsland = {
+  isNative,
+  listener: null,
+  async hasPermission(){ if(!isNative)return {granted:false}; return MfitIsland.hasPermission(); },
+  async requestPermission(){ if(!isNative)return {granted:false}; return MfitIsland.requestPermission(); },
+  async start(data){ if(!isNative)return {permission:false}; return MfitIsland.start(data); },
+  async update(data){ if(isNative) return MfitIsland.update(data); },
+  async stop(){ if(isNative) return MfitIsland.stop(); },
+  async onControl(callback){ if(!isNative||this.listener)return; this.listener=await MfitIsland.addListener('control',event=>callback&&callback(event?.action)); }
 };

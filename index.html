@@ -104,8 +104,8 @@ $('resetWater').onclick=()=>{day.water=0;data.waterDate=localDayKey();render();t
 function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current){day.water=0;data.waterDate=current;render()}}
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
-let motionOn=false,lastStepAt=0,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
-let motionSmooth=0,motionBaseline=0,motionNoise=0.12,previousDynamic=0,candidateStepAt=0;
+let motionOn=false,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
+let motionSmooth=0,motionBaseline=0,previousDynamic=0,lastPeakAt=0,stepPeakTimes=[];
 const motionGrantKey='mfit-motion-permission-v1';
 async function enableMotion(fromUserGesture=false){
  try{
@@ -119,7 +119,7 @@ async function enableMotion(fromUserGesture=false){
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
    try{localStorage.setItem(motionGrantKey,'granted')}catch(storageError){}
   }
-  motionOn=true;peak=0;wasRising=false;gravityReady=false;motionSmooth=0;motionBaseline=0;motionNoise=0.12;previousDynamic=0;candidateStepAt=0;lastStepAt=0;
+  motionOn=true;peak=0;wasRising=false;gravityReady=false;motionSmooth=0;motionBaseline=0;previousDynamic=0;lastPeakAt=0;stepPeakTimes=[];
   window.addEventListener('devicemotion',onMotion,{passive:true});
   $('motionStatus').textContent='Sensor ready · walk naturally with your phone';
  }catch(e){$('motionStatus').textContent='Could not access motion sensor';toast('Check browser sensor permission')}
@@ -159,40 +159,49 @@ function onMotion(e){
   const a=e.accelerationIncludingGravity;
   if(!a||!Number.isFinite(a.x)||!Number.isFinite(a.y)||!Number.isFinite(a.z))return;
   if(!gravityReady){gravity={x:a.x,y:a.y,z:a.z};gravityReady=true;return}
-  const alpha=0.90;
+  const alpha=0.92;
   gravity.x=alpha*gravity.x+(1-alpha)*a.x;
   gravity.y=alpha*gravity.y+(1-alpha)*a.y;
   gravity.z=alpha*gravity.z+(1-alpha)*a.z;
   signal=Math.hypot(a.x-gravity.x,a.y-gravity.y,a.z-gravity.z);
  }
  if(!Number.isFinite(signal))return;
- motionSmooth=motionSmooth===0?signal:motionSmooth*0.62+signal*0.38;
- motionBaseline=motionBaseline===0?motionSmooth:motionBaseline*0.96+motionSmooth*0.04;
+ motionSmooth=motionSmooth===0?signal:motionSmooth*0.68+signal*0.32;
+ motionBaseline=motionBaseline===0?motionSmooth:motionBaseline*0.985+motionSmooth*0.015;
  const dynamic=Math.max(0,motionSmooth-motionBaseline);
- if(dynamic<0.55)motionNoise=motionNoise*0.96+dynamic*0.04;
- const threshold=Math.max(0.95,motionNoise*3.2);
  if(dynamic>previousDynamic){
   if(!wasRising){wasRising=true;peak=dynamic}
   else peak=Math.max(peak,dynamic);
- }else if(wasRising&&peak-dynamic>0.16){
+ }else if(wasRising&&peak-dynamic>0.22){
   const now=Date.now();
-  if(peak>=threshold){
-   if(!candidateStepAt){
-    candidateStepAt=now;
-   }else{
-    const interval=now-candidateStepAt;
-    if(interval>=320&&interval<=1600){
-     if(!lastStepAt){
-      registerWalkingSteps(2);
-     }else if(now-lastStepAt>=320){
+  // Require a distinct, reasonably strong acceleration pulse.
+  if(peak>=1.55){
+   const interval=lastPeakAt?now-lastPeakAt:0;
+   if(!lastPeakAt){
+    stepPeakTimes=[now];
+    lastPeakAt=now;
+   }else if(interval>=350&&interval<=1100){
+    const prior=stepPeakTimes.length>1?stepPeakTimes[stepPeakTimes.length-1]-stepPeakTimes[stepPeakTimes.length-2]:interval;
+    const cadenceStable=stepPeakTimes.length<2||Math.abs(interval-prior)<=Math.max(260,prior*0.42);
+    if(cadenceStable){
+     stepPeakTimes.push(now);
+     if(stepPeakTimes.length===4){
+      // Backfill only after four consecutive walking-like pulses.
+      registerWalkingSteps(4);
+     }else if(stepPeakTimes.length>4){
       registerWalkingSteps(1);
      }
-     lastStepAt=now;
-     candidateStepAt=now;
-    }else if(interval>1600){
-     candidateStepAt=now;
+     lastPeakAt=now;
+    }else{
+     stepPeakTimes=[now];
+     lastPeakAt=now;
     }
+   }else{
+    // A long pause or an implausibly fast shake starts a new sequence.
+    stepPeakTimes=[now];
+    lastPeakAt=now;
    }
+   if(stepPeakTimes.length>4)stepPeakTimes=stepPeakTimes.slice(-4);
   }
   wasRising=false;peak=0;
  }

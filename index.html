@@ -104,7 +104,7 @@ $('resetWater').onclick=()=>{day.water=0;data.waterDate=localDayKey();render();t
 function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current){day.water=0;data.waterDate=current;render()}}
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
-let motionOn=false,lastStepAt=0,wasRising=false,peak=0;
+let motionOn=false,lastStepAt=0,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
 async function enableMotion(fromUserGesture=false){
  try{
   if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';return}
@@ -114,21 +114,31 @@ async function enableMotion(fromUserGesture=false){
    const permission=await DeviceMotionEvent.requestPermission();
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
   }
-  motionOn=true;peak=0;wasRising=false;
-  window.addEventListener('devicemotion',onMotion);
-  $('motionStatus').textContent='Step counter active · works outside activities';
+  motionOn=true;peak=0;wasRising=false;gravityReady=false;
+  window.addEventListener('devicemotion',onMotion,{passive:true});
+  $('motionStatus').textContent='Sensor ready · move your phone to count steps';
  }catch(e){$('motionStatus').textContent='Could not access motion sensor';toast('Check browser sensor permission')}
 }
 function onMotion(e){
  if(!motionOn)return;
- const a=e.accelerationIncludingGravity||e.acceleration;
- if(!a||a.x==null||a.y==null||a.z==null)return;
- const magnitude=Math.sqrt(a.x*a.x+a.y*a.y+a.z*a.z);
- const signal=Math.abs(magnitude-9.81);
- if(signal>1.35){wasRising=true;peak=Math.max(peak,signal)}
- else if(wasRising&&signal<0.75){
+ let signal=0;
+ const linear=e.acceleration;
+ if(linear&&Number.isFinite(linear.x)&&Number.isFinite(linear.y)&&Number.isFinite(linear.z)){
+  signal=Math.hypot(linear.x,linear.y,linear.z);
+ }else{
+  const a=e.accelerationIncludingGravity;
+  if(!a||!Number.isFinite(a.x)||!Number.isFinite(a.y)||!Number.isFinite(a.z))return;
+  if(!gravityReady){gravity={x:a.x,y:a.y,z:a.z};gravityReady=true;return}
+  const alpha=0.82;
+  gravity.x=alpha*gravity.x+(1-alpha)*a.x;
+  gravity.y=alpha*gravity.y+(1-alpha)*a.y;
+  gravity.z=alpha*gravity.z+(1-alpha)*a.z;
+  signal=Math.hypot(a.x-gravity.x,a.y-gravity.y,a.z-gravity.z);
+ }
+ if(signal>0.95){wasRising=true;peak=Math.max(peak,signal)}
+ else if(wasRising&&signal<0.4){
   const now=Date.now();
-  if(peak>1.7&&now-lastStepAt>300){
+  if(peak>1.15&&now-lastStepAt>260){
    day.steps++;lastStepAt=now;render();
    $('motionStatus').textContent='Step counter active · '+day.steps.toLocaleString()+' steps today';
   }

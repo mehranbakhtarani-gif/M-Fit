@@ -389,14 +389,14 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  const save=()=>{try{localStorage.setItem(storeKey,JSON.stringify(state))}catch(e){}};
  const fmt=n=>{n=Math.max(0,Math.floor(n));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(v=>String(v).padStart(2,'0')).join(':')};
  function paint(){
-  const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTime=$('fastStartTime');
+  const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTimeInput=$('fastStartTime');
   if(!clock||!status||!bar||!remaining||!toggle||!hours)return;
   const goal=state.target*3600000;
   if(state.fasting&&state.start>0){
    const elapsed=Math.max(0,Date.now()-state.start),left=Math.max(0,goal-elapsed),pct=Math.min(100,elapsed/goal*100);
    clock.textContent=fmt(elapsed/1000);
    bar.style.width=pct+'%';
-   toggle.textContent='END FAST';hours.disabled=true;if(startTime)startTime.disabled=true;
+   toggle.textContent='END FAST';hours.disabled=true;if(startTimeInput)startTimeInput.disabled=true;
    if(left<=0){
     remaining.textContent='Fasting time finished';
     status.textContent='FASTING COMPLETE';
@@ -416,7 +416,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    state.fasting=false;state.start=0;state.completed=false;
    clock.textContent='00:00:00';status.textContent='Ready · '+state.target+'-hour target';
    bar.style.width='0%';remaining.textContent='Time remaining · '+fmt(goal/1000);
-   toggle.textContent='START FAST';hours.disabled=false;if(startTime)startTime.disabled=false;
+   toggle.textContent='START FAST';hours.disabled=false;if(startTimeInput)startTimeInput.disabled=false;
   }
  }
  const startTime=$('fastStartTime');

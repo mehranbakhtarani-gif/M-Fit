@@ -553,6 +553,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
   if(!root)return;
   if(root.nodeType===Node.TEXT_NODE){wrapText(root);return;}
   if(root.nodeType!==Node.ELEMENT_NODE||ignored.has(root.tagName)||root.closest('bdi.mfit-fa-bidi'))return;
+  setControls(root);
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
   nodes.forEach(wrapText);

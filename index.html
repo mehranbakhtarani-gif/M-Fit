@@ -236,6 +236,8 @@ function setMapStyle(style){
    liveMap.attributionControl.addAttribution('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap');
   }
  }
+ if(style.startsWith('ofm-'))liveMap.attributionControl.addAttribution('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap');
+ else liveMap.attributionControl.removeAttribution('OpenFreeMap © OpenMapTiles · Data from OpenStreetMap');
  if(style==='street'&&streetTiles)streetTiles.addTo(liveMap);
  if(style==='satellite'&&(satelliteFallbackTiles||satelliteTiles))(satelliteFallbackTiles||satelliteTiles).addTo(liveMap);
  mapStyle=style;

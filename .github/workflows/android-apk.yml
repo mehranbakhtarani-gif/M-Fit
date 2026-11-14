@@ -48,11 +48,13 @@ jobs:
           import re
           from pathlib import Path
           html = Path("index.html").read_text(encoding="utf-8")
-          scripts = re.findall(r"<script(?:\s[^>]*)?>(.*?)</script\s*>", html, flags=re.I | re.S)
+          matches = re.findall(r"(<script(?:\s[^>]*)?>)(.*?)</script\s*>", html, flags=re.I | re.S)
+          scripts = [(tag, body) for tag, body in matches if "type=\"importmap\"" not in tag.lower()]
           if not scripts:
               raise SystemExit("No inline scripts found")
-          for index, script in enumerate(scripts):
-              path = Path(f"/tmp/mfit-inline-{index}.js")
+          for index, (tag, script) in enumerate(scripts):
+              suffix = ".mjs" if "type=\"module\"" in tag.lower() else ".js"
+              path = Path(f"/tmp/mfit-inline-{index}{suffix}")
               path.write_text(script, encoding="utf-8")
               print(f"Checking inline script {index + 1}/{len(scripts)}")
               import subprocess

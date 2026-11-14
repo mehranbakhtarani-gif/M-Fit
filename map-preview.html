@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#eef9f5">
+<title>M FIT · 3D Map Preview</title>
+<link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+:root{color-scheme:light;--ink:#173d39;--muted:#78958e;--mint:#54c69d;--glass:rgba(255,255,255,.72)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:18px;background:radial-gradient(ellipse at 8% 5%,#d8f7e9 0,transparent 34%),radial-gradient(ellipse at 92% 14%,#dcefff 0,transparent 36%),linear-gradient(145deg,#f7fcf9,#edf7fb);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+.shell{width:min(620px,100%);margin:auto}.top{display:flex;align-items:center;justify-content:space-between;padding:10px 3px 18px}.brand{font-size:13px;font-weight:950;letter-spacing:.22em}.brand span{color:#55bb99}.tag{font-size:9px;font-weight:850;letter-spacing:.12em;color:#397c68;background:#ffffffa8;border:1px solid #fff;padding:8px 11px;border-radius:99px;box-shadow:0 5px 18px #a4cbbb33}
+h1{font-size:27px;letter-spacing:-.055em;margin:2px 0 5px}.sub{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 17px}.map-card{position:relative;overflow:hidden;border-radius:30px;border:1px solid #ffffffd9;box-shadow:0 22px 60px #6d9f8d2a;background:#dcefe6}.map{height:min(67vh,570px);min-height:390px;width:100%}.maplibregl-ctrl-bottom-right,.maplibregl-ctrl-bottom-left{margin-bottom:10px}.maplibregl-ctrl-attrib{font-size:8px!important}.overlay{position:absolute;z-index:3;pointer-events:none;left:14px;right:14px;top:14px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.glass{background:rgba(255,255,255,.78);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid #ffffffed;box-shadow:0 8px 22px #315b4b1c}.live{padding:10px 12px;border-radius:15px;font-size:9px;font-weight:900;letter-spacing:.1em}.live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4ac49a;margin-right:6px;box-shadow:0 0 0 4px #4ac49a22}.weather{padding:10px 12px;border-radius:16px;text-align:right}.weather b{display:block;font-size:18px;letter-spacing:-.04em}.weather span{font-size:8px;color:var(--muted);font-weight:800;letter-spacing:.1em}.bottom{position:absolute;z-index:3;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-between;align-items:end;gap:8px;pointer-events:none}.route-chip,.terrain-chip{border-radius:15px;padding:10px 12px;font-size:9px;font-weight:850;letter-spacing:.06em}.route-chip span{color:#188e6e}.terrain-chip{color:#426f66}.tools{display:flex;gap:8px;margin-top:14px}.tools button{flex:1;padding:13px 9px;border-radius:16px;border:1px solid #ffffff;background:linear-gradient(135deg,#ffffffd9,#dff6ecdd);box-shadow:0 7px 18px #8ebfac33;color:#286555;font-size:10px;font-weight:850;letter-spacing:.04em}.tools button:active{transform:scale(.98)}.note{text-align:center;font-size:10px;color:#809a92;margin:13px 8px 0;line-height:1.6}.map-error{position:absolute;z-index:4;inset:0;display:none;place-items:center;text-align:center;padding:30px;background:#eef8f4;color:#315d51;font-size:13px}.map-error.show{display:grid}
+</style>
+</head>
+<body>
+<main class="shell">
+ <div class="top"><div class="brand">M <span>FIT</span></div><div class="tag">MAP LAB · PREVIEW 03</div></div>
+ <h1>Colorful 3D Streets.</h1>
+ <p class="sub">A brighter, more dimensional route map — with raised city blocks, soft color and a vivid activity path.</p>
+ <section class="map-card">
+  <div id="map" class="map" aria-label="Interactive 3D map preview"></div>
+  <div class="overlay"><div class="glass live"><i></i>3D CITY VIEW</div><div class="glass weather"><span>LOCAL WEATHER</span><b>☀ 22°</b></div></div>
+  <div class="bottom"><div class="glass route-chip">ROUTE <span>● ACTIVE PREVIEW</span></div><div class="glass terrain-chip">BUILDINGS · 3D</div></div>
+  <div id="mapError" class="map-error">The 3D map could not load. Check your internet connection and reopen this preview.</div>
+ </section>
+ <div class="tools"><button id="tilt">3D / TOP VIEW</button><button id="rotate">ROTATE MAP</button><button id="reset">RESET VIEW</button></div>
+ <p class="note">Preview only — this does not replace the map in M FIT. Sample city and route are shown for design review.</p>
+</main>
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+<script>
+(function(){
+ if(!window.maplibregl){document.getElementById('mapError').classList.add('show');return}
+ const center=[-73.9857,40.7484];
+ const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/bright',center,zoom:15.5,pitch:58,bearing:-18,antialias:true,attributionControl:true});
+ map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true}),'bottom-right');
+ map.on('error',e=>{if(e&&e.error)console.warn('M FIT map preview',e.error)});
+ map.on('load',()=>{
+  try{
+   map.addSource('openfreemap-buildings',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
+   const layers=map.getStyle().layers;let labelLayer;
+   for(const layer of layers){if(layer.type==='symbol'&&layer.layout&&layer.layout['text-field']){labelLayer=layer.id;break}}
+   map.addLayer({id:'mfit-3d-buildings',source:'openfreemap-buildings','source-layer':'building',type:'fill-extrusion',minzoom:14,filter:['!=',['get','hide_3d'],true],paint:{
+    'fill-extrusion-color':['interpolate',['linear'],['coalesce',['get','render_height'],['get','height'],10],0,'#f5d9a8',24,'#efb9a1',70,'#b5c9e8',150,'#aaa5e8',300,'#8dc9bd'],
+    'fill-extrusion-height':['interpolate',['linear'],['zoom'],14,0,15,['coalesce',['get','render_height'],['get','height'],10]],
+    'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
+    'fill-extrusion-opacity':.94
+   }},labelLayer);
+   const route={type:'Feature',geometry:{type:'LineString',coordinates:[[-73.9926,40.7521],[-73.9896,40.7508],[-73.9868,40.7492],[-73.9835,40.7478],[-73.9804,40.7461],[-73.9778,40.7447]]}};
+   map.addSource('mfit-route',{type:'geojson',data:route});
+   map.addLayer({id:'mfit-route-glow',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':12,'line-opacity':.92}});
+   map.addLayer({id:'mfit-route-line',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#22b88d','line-width':6,'line-opacity':1}});
+   map.addLayer({id:'mfit-route-points',type:'circle',source:'mfit-route',paint:{'circle-radius':6,'circle-color':'#ffffff','circle-stroke-color':'#22b88d','circle-stroke-width':3}});
+   setTimeout(()=>map.resize(),180);
+  }catch(err){console.warn(err)}
+ });
+ document.getElementById('tilt').onclick=()=>map.easeTo({pitch:map.getPitch()>20?0:58,duration:650});
+ document.getElementById('rotate').onclick=()=>map.easeTo({bearing:map.getBearing()+45,duration:700});
+ document.getElementById('reset').onclick=()=>map.easeTo({center,zoom:15.5,pitch:58,bearing:-18,duration:700});
+ window.addEventListener('resize',()=>map.resize());
+ setTimeout(()=>{if(!map.loaded())document.getElementById('mapError').classList.add('show')},14000);
+})();
+</script>
+</body>
+</html>

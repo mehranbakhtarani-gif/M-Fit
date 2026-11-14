@@ -82,8 +82,8 @@ let manifest = await readFile(manifestPath, 'utf8');
 if (!manifest.includes('android.permission.SYSTEM_ALERT_WINDOW')) manifest = manifest.replace(/(<manifest\b[^>]*>)/, '$1\n    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />');
 await writeFile(manifestPath, manifest);
 if (!mainSource.includes('MfitIslandPlugin')) {
-  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\\nimport com.mfit.wellness.plugins.MfitIslandPlugin;');
-  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\\n        registerPlugin(MfitIslandPlugin.class);');
+  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\nimport com.mfit.wellness.plugins.MfitIslandPlugin;');
+  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitIslandPlugin.class);');
   await writeFile(mainPath, mainSource);
 }
 console.log('Generated native floating workout island plugin.');

@@ -244,7 +244,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
   }catch(e){toast('ساخت عکس مسیر ناموفق بود؛ دوباره تلاش کن')}
  };
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
-render();renderHistory();enableMotion(false);$('resetSteps').onclick=()=>{if(!day.steps){toast('Step count is already zero');return}if(!confirm('Reset today’s step count to zero?'))return;day.steps=0;render();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset')};updateFast();setInterval(updateFast,1000);
+render();renderHistory();enableMotion(false);$('resetSteps').addEventListener('click',e=>{e.preventDefault();e.stopPropagation();day.steps=0;render();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')});updateFast();setInterval(updateFast,1000);
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 </script>

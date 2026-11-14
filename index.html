@@ -456,7 +456,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    if(state.fasting){state.fasting=false;state.start=0;state.completed=false}
    else{
     state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));
-    const now=new Date(),chosen=(startTime&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(startTime.value))?startTime.value:currentLocalTime();const [hh,mm]=chosen.split(':').map(Number);const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);if(start.getTime()>now.getTime())start.setDate(start.getDate()-1);state.start=start.getTime();state.fasting=true;state.completed=false;
+    const now=new Date(),chosen=(startTime&&/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime.value))?startTime.value:currentLocalTime();const [hh,mm]=chosen.split(':').map(Number);const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);if(start.getTime()>now.getTime())start.setDate(start.getDate()-1);state.start=start.getTime();state.fasting=true;state.completed=false;
     if('Notification' in window&&Notification.permission==='default'){
      try{Notification.requestPermission()}catch(e){}
     }

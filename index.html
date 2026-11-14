@@ -255,7 +255,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
  };
 function resetDailySteps(){day.steps=0;data.days[todayKey]=day;localStorage.setItem(key,JSON.stringify(data));$('steps').innerHTML='0 <span class="metric-unit">steps</span>';$('stepbar').style.width='0%';renderWeek();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')}
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
-render();renderHistory();enableMotion(false);updateFast();setInterval(updateFast,1000);
+enableMotion(false);try{render();renderHistory();}catch(initError){console.error('M FIT render initialization:',initError)}updateFast();setInterval(updateFast,1000);
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
 </script>

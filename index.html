@@ -140,10 +140,12 @@ function walkingCaloriesPerStep(){
 }
 function registerWalkingSteps(count){
  if(!count)return;
- const oldCalories=Math.round(day.stepCalories||0);
  day.steps+=count;
- day.stepCalories=(day.stepCalories||0)+walkingCaloriesPerStep()*count;
- day.burned=(Number(day.burned)||0)+Math.round(day.stepCalories)-oldCalories;
+ if(!active){
+  const oldCalories=Math.round(day.stepCalories||0);
+  day.stepCalories=(day.stepCalories||0)+walkingCaloriesPerStep()*count;
+  day.burned=(Number(day.burned)||0)+Math.round(day.stepCalories)-oldCalories;
+ }
  render();
  $('motionStatus').textContent='Walking detected · '+day.steps.toLocaleString()+' steps today';
 }

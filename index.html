@@ -84,7 +84,7 @@ const FOOD_AI_ENDPOINT='https://m-fit-food-ai.YOUR-SUBDOMAIN.workers.dev';
 const localDayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const todayKey=localDayKey();
 let data=JSON.parse(localStorage.getItem(key)||'{}');
-data.days=data.days||{};data.days[todayKey]=data.days[todayKey]||{steps:0,water:0,food:[],burned:0};let day=data.days[todayKey];
+data.days=data.days||{};data.days[todayKey]=data.days[todayKey]||{steps:0,water:0,food:[],burned:0,stepCalories:0};let day=data.days[todayKey];day.stepCalories=Number(day.stepCalories)||0;
 let fasting=!!data.fasting,fastStart=data.fastStart||0,fastTimer=null,fastTarget=Number(data.fastTarget)||16;
 let mode='Walk',active=false,startedAt=0,elapsed=0,activityTimer=null,watchId=null,coords=[],distance=0,historyPeriod='day';
 let liveMap=null,routeLayer=null,currentMarker=null,userLocationMarker=null,mapStyle=data.mapStyle||'street',streetTiles=null,satelliteTiles=null;
@@ -105,6 +105,7 @@ function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
 let motionOn=false,lastStepAt=0,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
+let motionSmooth=0,motionBaseline=0,motionNoise=0.12,previousDynamic=0,candidateStepAt=0;
 const motionGrantKey='mfit-motion-permission-v1';
 async function enableMotion(fromUserGesture=false){
  try{
@@ -118,10 +119,33 @@ async function enableMotion(fromUserGesture=false){
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
    try{localStorage.setItem(motionGrantKey,'granted')}catch(storageError){}
   }
-  motionOn=true;peak=0;wasRising=false;gravityReady=false;
+  motionOn=true;peak=0;wasRising=false;gravityReady=false;motionSmooth=0;motionBaseline=0;motionNoise=0.12;previousDynamic=0;candidateStepAt=0;lastStepAt=0;
   window.addEventListener('devicemotion',onMotion,{passive:true});
-  $('motionStatus').textContent='Sensor ready · move your phone to count steps';
+  $('motionStatus').textContent='Sensor ready · walk naturally with your phone';
  }catch(e){$('motionStatus').textContent='Could not access motion sensor';toast('Check browser sensor permission')}
+}
+function walkingCaloriesPerStep(){
+ const measurements=Array.isArray(data.bodyMeasurements)?data.bodyMeasurements:[];
+ let weight=75,height=173;
+ for(let i=measurements.length-1;i>=0;i--){
+  const m=measurements[i]||{};
+  if(Number(m.weight)>20&&Number(m.weight)<350){weight=Number(m.weight);break}
+ }
+ for(let i=measurements.length-1;i>=0;i--){
+  const m=measurements[i]||{};
+  if(Number(m.height)>100&&Number(m.height)<250){height=Number(m.height);break}
+ }
+ const stride=Math.max(0.55,Math.min(0.95,height*0.415/100));
+ return weight*0.5*(stride/1000);
+}
+function registerWalkingSteps(count){
+ if(!count)return;
+ const oldCalories=Math.round(day.stepCalories||0);
+ day.steps+=count;
+ day.stepCalories=(day.stepCalories||0)+walkingCaloriesPerStep()*count;
+ day.burned=(Number(day.burned)||0)+Math.round(day.stepCalories)-oldCalories;
+ render();
+ $('motionStatus').textContent='Walking detected · '+day.steps.toLocaleString()+' steps today';
 }
 function onMotion(e){
  if(!motionOn)return;
@@ -133,21 +157,44 @@ function onMotion(e){
   const a=e.accelerationIncludingGravity;
   if(!a||!Number.isFinite(a.x)||!Number.isFinite(a.y)||!Number.isFinite(a.z))return;
   if(!gravityReady){gravity={x:a.x,y:a.y,z:a.z};gravityReady=true;return}
-  const alpha=0.82;
+  const alpha=0.90;
   gravity.x=alpha*gravity.x+(1-alpha)*a.x;
   gravity.y=alpha*gravity.y+(1-alpha)*a.y;
   gravity.z=alpha*gravity.z+(1-alpha)*a.z;
   signal=Math.hypot(a.x-gravity.x,a.y-gravity.y,a.z-gravity.z);
  }
- if(signal>0.95){wasRising=true;peak=Math.max(peak,signal)}
- else if(wasRising&&signal<0.4){
+ if(!Number.isFinite(signal))return;
+ motionSmooth=motionSmooth===0?signal:motionSmooth*0.62+signal*0.38;
+ motionBaseline=motionBaseline===0?motionSmooth:motionBaseline*0.96+motionSmooth*0.04;
+ const dynamic=Math.max(0,motionSmooth-motionBaseline);
+ if(dynamic<0.55)motionNoise=motionNoise*0.96+dynamic*0.04;
+ const threshold=Math.max(0.95,motionNoise*3.2);
+ if(dynamic>previousDynamic){
+  if(!wasRising){wasRising=true;peak=dynamic}
+  else peak=Math.max(peak,dynamic);
+ }else if(wasRising&&peak-dynamic>0.16){
   const now=Date.now();
-  if(peak>1.15&&now-lastStepAt>260){
-   day.steps++;lastStepAt=now;render();
-   $('motionStatus').textContent='Step counter active · '+day.steps.toLocaleString()+' steps today';
+  if(peak>=threshold){
+   if(!candidateStepAt){
+    candidateStepAt=now;
+   }else{
+    const interval=now-candidateStepAt;
+    if(interval>=320&&interval<=1600){
+     if(!lastStepAt){
+      registerWalkingSteps(2);
+     }else if(now-lastStepAt>=320){
+      registerWalkingSteps(1);
+     }
+     lastStepAt=now;
+     candidateStepAt=now;
+    }else if(interval>1600){
+     candidateStepAt=now;
+    }
+   }
   }
   wasRising=false;peak=0;
  }
+ previousDynamic=dynamic;
 }
 function disableMotion(){
  if(!motionOn)return;

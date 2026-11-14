@@ -548,6 +548,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
   bdi.appendChild(node);
   if(!['BODY','HTML','HEAD'].includes(parent.tagName))parent.classList.add('mfit-has-persian');
  }
+ function setControls(root){if(root.nodeType!==Node.ELEMENT_NODE)return;const selector='input:not([type=number]):not([type=date]):not([type=time]):not([type=range]),textarea';if(root.matches(selector))root.setAttribute('dir','auto');root.querySelectorAll(selector).forEach(el=>el.setAttribute('dir','auto'))}
  function scan(root){
   if(!root)return;
   if(root.nodeType===Node.TEXT_NODE){wrapText(root);return;}

@@ -1,4 +1,5 @@
 name: Build Mfit Android APK
+# Uses the runner-provisioned Android SDK; no setup action that installs obsolete SDK tools.
 
 on:
   workflow_dispatch:

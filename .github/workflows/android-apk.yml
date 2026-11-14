@@ -1,5 +1,6 @@
 name: Build Mfit Android APK
 # Build the Android wrapper from the web app and sync installed Capacitor plugins.
+# Rebuilds are triggered by activity UI and route-sharing changes.
 
 on:
   workflow_dispatch:

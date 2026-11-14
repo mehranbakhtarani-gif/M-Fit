@@ -316,7 +316,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
    if(index<0){
     const target=Date.UTC(Number(part('year')),Number(part('month'))-1,Number(part('day')),Number(part('hour')));
     let best=Infinity;
-    hourly.time.forEach((t,i)=>{const m=String(t).match(/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2})/);if(m){const v=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4]),d=Math.abs(v-target);if(d<best){best=d;index=i}}});
+    hourly.time.forEach((t,i)=>{const m=String(t).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2})/);if(m){const v=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4]),d=Math.abs(v-target);if(d<best){best=d;index=i}}});
    }
    if(index<0)return null;
    const n=(key)=>Number(hourly[key]?.[index]);
@@ -355,7 +355,8 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
   if(!route.length){toast('اول یک فعالیت GPS ثبت کن و ذخیره‌اش کن');return}
   const modeName=coords.length?mode:(saved?.mode||'Activity'),km=coords.length?distance:Number(saved?.distance||0),seconds=coords.length?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=estimateActivityCalories(modeName,km,seconds);
   try{
-   const activityEnd=coords.length?Date.now():(Number(saved?.timestamp)||Date.now());const weather=await getRouteWeather(route,activityEnd,seconds);\n   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather});
+   const activityEnd=coords.length?Date.now():(Number(saved?.timestamp)||Date.now());const weather=await getRouteWeather(route,activityEnd,seconds);
+   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather});
    const file=new File([blob],'mfit-route.png',{type:'image/png'});
    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({title:'M FIT route',text:'مسیر فعالیت من در M FIT',files:[file]});toast('عکس مسیر برای اشتراک‌گذاری ارسال شد');return}

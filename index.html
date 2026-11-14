@@ -1,11 +1,15 @@
 <!doctype html>
-<html lang="en">
+<html lang="fa">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#eaf8f4"><meta name="description" content="M FIT — personal wellness and activity tracker">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"><link rel="manifest" href="./manifest.webmanifest"><link rel="icon" href="./icon.svg" type="image/svg+xml">
 <title>M FIT — Wellness</title>
 <style>
+/* Persian text: right-align each Persian text run without reversing embedded Latin text or numbers. */
+.mfit-has-persian{text-align:right}
+bdi.mfit-fa-bidi{direction:auto;unicode-bidi:isolate}
+
 :root{--ink:#183b3b;--muted:#77918d;--mint:#8ee2c6;--blue:#b9e8f5;--line:rgba(255,255,255,.82);--glass:rgba(255,255,255,.58);--shadow:0 18px 50px rgba(82,145,132,.12)}
 *{box-sizing:border-box}body{margin:0;color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 8% 4%,#d7f5e9 0,transparent 35%),radial-gradient(ellipse at 95% 18%,#d8f1fb 0,transparent 34%),linear-gradient(145deg,#f5fcf8,#edf8fb 55%,#f8fbf9);min-height:100vh}
 button,input{font:inherit}button{cursor:pointer;border:0;color:inherit}.app{max-width:560px;margin:auto;min-height:100vh;padding:env(safe-area-inset-top) 18px calc(112px + env(safe-area-inset-bottom));position:relative;overflow:hidden}
@@ -528,4 +532,36 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){paint();save()}});
  paint();setInterval(paint,1000);
 })();
-</script></body></html>
+</script>
+<script>
+(()=>{
+ const fa=/[\u0600-\u06FF]/;
+ const ignored=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','PRE','CODE','SVG']);
+ function wrapText(node){
+  if(!node||node.nodeType!==Node.TEXT_NODE||!fa.test(node.nodeValue||''))return;
+  const parent=node.parentElement;
+  if(!parent||ignored.has(parent.tagName)||parent.closest('bdi.mfit-fa-bidi'))return;
+  const bdi=document.createElement('bdi');
+  bdi.className='mfit-fa-bidi';
+  bdi.setAttribute('dir','auto');
+  parent.replaceChild(bdi,node);
+  bdi.appendChild(node);
+  if(!['BODY','HTML','HEAD'].includes(parent.tagName))parent.classList.add('mfit-has-persian');
+ }
+ function scan(root){
+  if(!root)return;
+  if(root.nodeType===Node.TEXT_NODE){wrapText(root);return;}
+  if(root.nodeType!==Node.ELEMENT_NODE||ignored.has(root.tagName)||root.closest('bdi.mfit-fa-bidi'))return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(wrapText);
+ }
+ scan(document.body);
+ const observer=new MutationObserver(records=>records.forEach(record=>{
+  if(record.type==='characterData')wrapText(record.target);
+  record.addedNodes&&record.addedNodes.forEach(scan);
+ }));
+ observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+})();
+</script>
+</body></html>

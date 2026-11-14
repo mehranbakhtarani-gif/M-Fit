@@ -1,10 +1,10 @@
 name: Build Mfit Android APK
-# Uses the runner-provisioned Android SDK; no setup action that installs obsolete SDK tools.
+# Build the Android wrapper from the web app and sync installed Capacitor plugins.
 
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, mfit-complete-fixes]
     paths:
       - 'index.html'
       - 'native-bridge.js'
@@ -41,13 +41,15 @@ jobs:
       - name: Install Android platform and build tools
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
       - name: Prepare web app
         run: npm run prepare:web
       - name: Generate Android project
         run: npx cap add android
       - name: Apply Mfit launcher icon
         run: npm run prepare:android
+      - name: Sync Capacitor plugins and web assets
+        run: npx cap sync android
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --stacktrace

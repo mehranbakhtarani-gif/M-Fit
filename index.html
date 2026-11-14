@@ -516,16 +516,16 @@ $('voiceCoachToggle').onclick=async()=>{
     try{
       const info=await nativeTts.getPersianVoiceInfo();
       if(!info.available){
-        $('voiceCoachStatus').textContent='Opening Android Persian voice setup…';
+        $('voiceCoachStatus').textContent='در حال بازکردن تنظیمات صدای اندروید…';
         await nativeTts.openPersianInstall();
-        $('voiceCoachStatus').textContent='Install or enable a Persian voice, then tap VOICE OFF and VOICE ON.';
+        $('voiceCoachStatus').textContent='صدای فارسی هنوز نصب یا فعال نیست. از تنظیمات موتور گفتار اندروید، زبان فارسی را نصب کن؛ سپس مربی را خاموش و روشن کن.';
         return;
       }
       $('voiceCoachStatus').textContent='Testing Persian voice…';
       await nativeTts.speak('سلام! مربی فارسی آماده است. از این به بعد همراه تمرینت هستم.');
       $('voiceCoachStatus').textContent='Persian voice is ready';
     }catch(error){
-      $('voiceCoachStatus').textContent='Persian voice setup required';
+      $('voiceCoachStatus').textContent='برای پخش صدای مربی، موتور گفتار فارسی را در اندروید نصب یا فعال کن.';
       try{await nativeTts.openPersianInstall()}catch(openError){}
     }
     return;
@@ -535,9 +535,9 @@ $('voiceCoachToggle').onclick=async()=>{
 coachSetStatus();
 if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative){
   window.MfitNativeTTS.getPersianVoiceInfo().then(info=>{
-    if(!info.available)$('voiceCoachStatus').textContent='Persian voice missing · tap VOICE OFF then VOICE ON to set up';
+    if(!info.available)$('voiceCoachStatus').textContent='صدای فارسی پیدا نشد؛ زبان فارسی را در تنظیمات تبدیل متن به گفتار اندروید نصب کن.';
     else $('voiceCoachStatus').textContent='Persian voice ready'+(info.voiceName?' · '+info.voiceName:'');
-  }).catch(()=>{$('voiceCoachStatus').textContent='Could not check Android voice engine'});
+  }).catch(()=>{$('voiceCoachStatus').textContent='بررسی موتور گفتار اندروید انجام نشد.'});
 }
 
 function saveActiveSessionDraft(){try{if(!activitySessionStarted&&!active&&!elapsed&&!coords.length){localStorage.removeItem(activityDraftKey);return}const elapsedNow=Math.max(0,elapsed+(active&&startedAt?(Date.now()-startedAt)/1000:0));localStorage.setItem(activityDraftKey,JSON.stringify({version:1,mode,elapsed:elapsedNow,distance,coords:coords.slice(-5000),savedAt:Date.now(),wasActive:active}))}catch(error){console.warn('Mfit session checkpoint failed:',error)}}

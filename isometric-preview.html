@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#eff8f4">
+<title>M FIT · Isometric City Preview</title>
+<link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
+<style>
+:root{--ink:#173d39;--muted:#78958e;--mint:#35c49a;--glass:rgba(255,255,255,.76)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:16px;background:radial-gradient(ellipse at 8% 4%,#d5f5e7 0,transparent 34%),radial-gradient(ellipse at 95% 12%,#d9eaff 0,transparent 36%),linear-gradient(145deg,#f8fcfa,#edf5fb);font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+.shell{width:min(650px,100%);margin:auto}.top{display:flex;justify-content:space-between;align-items:center;padding:8px 3px 17px}.brand{font-size:14px;font-weight:950;letter-spacing:.2em;direction:ltr}.brand span{color:#39b98f}.tag{font-size:9px;font-weight:900;letter-spacing:.13em;color:#397c68;background:#ffffffb5;border:1px solid #fff;padding:8px 11px;border-radius:99px;box-shadow:0 5px 18px #a4cbbb33}
+h1{font-size:29px;letter-spacing:-.06em;margin:0 0 5px;font-weight:900}.sub{font-size:12px;color:var(--muted);line-height:1.8;margin:0 0 16px}.map-card{position:relative;overflow:hidden;border-radius:30px;border:1px solid #ffffffdf;box-shadow:0 22px 60px #6d9f8d30;background:#dcefe6}.map{height:min(68vh,590px);min-height:420px;width:100%}
+.maplibregl-ctrl-bottom-right,.maplibregl-ctrl-bottom-left{margin-bottom:10px}.maplibregl-ctrl-attrib{font-size:8px!important}.overlay{position:absolute;z-index:3;pointer-events:none;left:13px;right:13px;top:13px;display:flex;align-items:flex-start;justify-content:space-between;gap:9px;direction:ltr}.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);-webkit-backdrop-filter:blur(18px) saturate(160%);border:1px solid #ffffffed;box-shadow:0 8px 22px #315b4b1c}.live{padding:10px 12px;border-radius:15px;font-size:9px;font-weight:900;letter-spacing:.1em}.live i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#43c79a;margin-right:6px;box-shadow:0 0 0 4px #43c79a22}.weather{padding:9px 12px;border-radius:15px;text-align:right}.weather b{display:block;font-size:18px}.weather span{font-size:8px;color:var(--muted);font-weight:850;letter-spacing:.1em}.bottom{position:absolute;z-index:3;left:13px;right:13px;bottom:13px;display:flex;justify-content:space-between;align-items:end;gap:8px;pointer-events:none;direction:ltr}.chip{border-radius:15px;padding:10px 12px;font-size:9px;font-weight:900;letter-spacing:.06em}.chip strong{color:#168e6d}.controls{display:flex;gap:8px;margin-top:13px;direction:ltr}.controls button{flex:1;padding:13px 8px;border-radius:16px;border:1px solid #ffffff;background:linear-gradient(135deg,#ffffffdf,#dff6ecdd);box-shadow:0 7px 18px #8ebfac33;color:#286555;font-size:10px;font-weight:900;letter-spacing:.03em}.controls button:active{transform:scale(.98)}.note{text-align:center;font-size:10px;color:#809a92;margin:12px 8px 0;line-height:1.8}.error{position:absolute;z-index:4;inset:0;display:none;place-items:center;text-align:center;padding:30px;background:#eef8f4;color:#315d51;font-size:13px}.error.show{display:grid}
+</style>
+</head>
+<body>
+<main class="shell">
+ <div class="top"><div class="brand">M <span>FIT</span></div><div class="tag">ISOMETRIC CITY · CONCEPT 01</div></div>
+ <h1>شهر، از زاویه‌ای متفاوت.</h1>
+ <p class="sub">نمای ایزومتریک سه‌بعدی با بلوک‌های مرتفع، خیابان‌های خوانا و مسیر فیروزه‌ای؛ یک کانسپت مستقل برای نقشهٔ ورزشی M FIT.</p>
+ <section class="map-card">
+  <div id="map" class="map" aria-label="Interactive isometric city map preview"></div>
+  <div class="overlay"><div class="glass live"><i></i>ISOMETRIC 3D</div><div class="glass weather"><span>WEATHER · SAMPLE</span><b>☀ 22°</b></div></div>
+  <div class="bottom"><div class="glass chip">ACTIVITY ROUTE <strong>● LIVE CONCEPT</strong></div><div class="glass chip">CITY BLOCKS · 3D</div></div>
+  <div id="error" class="error">نقشه بارگذاری نشد. اتصال اینترنت را بررسی کن و دوباره صفحه را باز کن.</div>
+ </section>
+ <div class="controls"><button id="tilt">ISOMETRIC / TOP</button><button id="spin">ROTATE 45°</button><button id="reset">RESET VIEW</button></div>
+ <p class="note">این فقط پیش‌نمایش طراحی است؛ شهر و مسیر نمونه هستند و هنوز به GPS یا نقشهٔ اصلی M FIT وصل نشده‌اند.</p>
+</main>
+<script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+<script>
+(()=> {
+ const error=document.getElementById('error');
+ if(!window.maplibregl){error.classList.add('show');return}
+ const center=[-73.9857,40.7484];
+ const map=new maplibregl.Map({container:'map',style:'https://tiles.openfreemap.org/styles/bright',center,zoom:15.7,pitch:66,bearing:-38,antialias:true,attributionControl:true});
+ map.addControl(new maplibregl.NavigationControl({showCompass:true,showZoom:true}),'bottom-right');
+ map.on('load',()=>{
+  try{
+   map.addSource('mfit-buildings',{type:'vector',url:'https://tiles.openfreemap.org/planet'});
+   const layers=map.getStyle().layers;let label;
+   for(const l of layers){if(l.type==='symbol'&&l.layout&&l.layout['text-field']){label=l.id;break}}
+   map.addLayer({id:'mfit-isometric-buildings',source:'mfit-buildings','source-layer':'building',type:'fill-extrusion',minzoom:13,filter:['!=',['get','hide_3d'],true],paint:{
+    'fill-extrusion-color':['match',['get','colour'],'#ffffff','#f6d9bd','#eeeeee','#d5e9e1','#f5d6b8','#f2c8a7','#d7e4f5','#b9cfee','#e7d9f4','#c8b9e9','#c9e8d9','#a9d9c4','#f4e4b7','#efd99b','#f0d3d7','#eabac6','#e8e5df','#d7d8d1','#f0cda8','#e7bd93','#c9dce8','#b8d1e0','#d7e7c9','#bdd8a8','#c7d7e7'],
+    'fill-extrusion-height':['interpolate',['linear'],['zoom'],13,0,15,['coalesce',['get','render_height'],['get','height'],12]],
+    'fill-extrusion-base':['coalesce',['get','render_min_height'],['get','min_height'],0],
+    'fill-extrusion-opacity':.97
+   }},label);
+   const route={type:'Feature',geometry:{type:'LineString',coordinates:[[-73.9930,40.7524],[-73.9903,40.7510],[-73.9876,40.7497],[-73.9850,40.7480],[-73.9820,40.7468],[-73.9792,40.7450],[-73.9768,40.7439]]}};
+   map.addSource('mfit-route',{type:'geojson',data:route});
+   map.addLayer({id:'mfit-route-shadow',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#ffffff','line-width':13,'line-opacity':.96}});
+   map.addLayer({id:'mfit-route-line',type:'line',source:'mfit-route',layout:{'line-cap':'round','line-join':'round'},paint:{'line-color':'#20bd91','line-width':6,'line-opacity':1}});
+   map.addLayer({id:'mfit-route-start',type:'circle',source:'mfit-route',filter:['==',['geometry-type'],'Point'],paint:{'circle-radius':6,'circle-color':'#fff','circle-stroke-color':'#20bd91','circle-stroke-width':3}});
+   setTimeout(()=>map.resize(),200);
+  }catch(e){console.warn('M FIT isometric preview',e)}
+ });
+ map.on('error',e=>{if(e&&e.error)console.warn(e.error)});
+ document.getElementById('tilt').onclick=()=>map.easeTo({pitch:map.getPitch()>20?0:66,duration:650});
+ document.getElementById('spin').onclick=()=>map.easeTo({bearing:map.getBearing()+45,duration:700});
+ document.getElementById('reset').onclick=()=>map.easeTo({center,zoom:15.7,pitch:66,bearing:-38,duration:750});
+ window.addEventListener('resize',()=>map.resize());
+ setTimeout(()=>{if(!map.loaded())error.classList.add('show')},16000);
+})();
+</script>
+</body></html>

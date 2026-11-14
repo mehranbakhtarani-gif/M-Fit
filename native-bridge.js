@@ -54,3 +54,9 @@ window.MfitNativeTTS = {
     return BackgroundGeolocation.removeWatcher({ id });
   }
 };
+
+window.MfitNativeGPS = {
+  isNative,
+  startGps: (...args) => window.MfitNativeTTS.startGps(...args),
+  stopGps: (id) => window.MfitNativeTTS.stopGps(id)
+};

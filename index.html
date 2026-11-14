@@ -212,7 +212,7 @@ try {
  console.warn('Leaflet module unavailable; loading standard Leaflet build.', leafletError);
  const fallback = document.createElement('script');
  fallback.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
- fallback.onerror = () => { fallback.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'; };
+ fallback.onerror = () => { fallback.onerror = null; fallback.src = 'https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'; };
  document.head.appendChild(fallback);
 }
 </script>

@@ -29,6 +29,22 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 .week-report{padding:16px;margin-top:12px}.week-report-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.week-report-title{font-size:13px;font-weight:850}.week-report-range{font-size:9px;color:var(--muted);margin-top:4px}.week-report-change{font-size:10px;font-weight:850;padding:7px 9px;border-radius:12px;background:#e6f6ef;color:#39866d;white-space:nowrap}.week-report-change.down{background:#fff0ed;color:#b66b58}.week-report-change.neutral{background:#eef3f1;color:#71877f}.week-report-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:14px}.week-report-stat{padding:12px;border-radius:17px;background:rgba(255,255,255,.56);border:1px solid rgba(255,255,255,.9);min-width:0}.week-report-stat span{display:block;font-size:9px;color:var(--muted);letter-spacing:.06em}.week-report-stat b{display:block;font-size:21px;letter-spacing:-.04em;margin-top:4px}.week-report-stat small{display:block;font-size:9px;color:var(--muted);margin-top:3px}.week-report-bars{display:flex;align-items:end;gap:7px;height:96px;margin-top:16px;padding:0 2px}.week-report-day{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:end;align-items:center;gap:6px}.week-report-day i{width:100%;max-width:25px;min-height:3px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#a9e9d5,#74c9b0)}.week-report-day.today i{background:linear-gradient(180deg,#bdeafa,#83cfe4)}.week-report-day span{font-size:9px;color:var(--muted)}.week-report-insight{margin-top:13px;padding:13px;border-radius:17px;background:linear-gradient(130deg,#f0fbf6,#edf7fb);border:1px solid #fff;font-size:11px;line-height:1.65;color:#496e63}.week-report-insight b{color:#286c56}.week-report-foot{font-size:9px;line-height:1.5;color:var(--muted);margin-top:10px}
 /* Advanced activity history and performance */
 .activity-records{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.activity-record{padding:13px;border-radius:18px;background:rgba(255,255,255,.66);border:1px solid #fff;min-width:0}.activity-record span{display:block;font-size:9px;color:var(--muted);letter-spacing:.04em}.activity-record b{display:block;font-size:20px;margin-top:5px;letter-spacing:-.04em}.activity-record small{display:block;font-size:9px;color:var(--muted);margin-top:3px}.history-summary{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:11px 13px;margin:0 0 10px;border-radius:15px;background:#ffffff8a;border:1px solid #fff;font-size:10px;color:#66877c}.activity-history-list{display:grid;gap:9px}.activity-entry{padding:0 13px;border-radius:18px;background:rgba(255,255,255,.72);border:1px solid #fff;box-shadow:0 5px 16px rgba(94,153,141,.05);min-width:0}.activity-entry summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px;padding:13px 0;cursor:pointer}.activity-entry summary::-webkit-details-marker{display:none}.activity-entry-main{min-width:0}.activity-entry-title{font-size:12px;font-weight:850}.activity-entry-date{font-size:9px;color:var(--muted);margin-top:4px}.activity-entry-metrics{text-align:right;flex:none}.activity-entry-distance{font-size:15px;font-weight:850}.activity-entry-sub{font-size:9px;color:var(--muted);margin-top:4px}.activity-entry-detail{border-top:1px solid #e4f0eb;padding:12px 0 13px}.activity-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.activity-detail-metric{padding:9px;border-radius:13px;background:#f4faf7}.activity-detail-metric span{display:block;font-size:8px;color:var(--muted)}.activity-detail-metric b{display:block;font-size:14px;margin-top:3px}.activity-splits{margin-top:12px}.activity-splits-title{font-size:10px;font-weight:850;margin-bottom:7px}.activity-split-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:7px 0;border-bottom:1px solid #e8f1ed;font-size:9px;color:#66877c}.activity-split-row b{text-align:right;color:#315f51}.activity-best{margin-top:10px;padding:10px;border-radius:13px;background:linear-gradient(120deg,#effaf5,#edf7fb);font-size:10px;color:#477466}.activity-best strong{color:#256c55}.activity-entry-empty{padding:16px;text-align:center;font-size:10px;color:var(--muted)}
+
+/* Share Route preview */
+.route-preview-overlay{position:fixed;inset:0;z-index:10020;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(19,43,39,.48);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.route-preview-overlay.open{display:flex}
+.route-preview-panel{width:min(100%,480px);max-height:calc(100dvh - 36px);overflow:auto;padding:16px;border-radius:28px;background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(232,249,243,.96));border:1px solid #fff;box-shadow:0 24px 80px rgba(20,65,54,.28)}
+.route-preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.route-preview-head strong{font-size:14px;letter-spacing:.04em}
+.route-preview-close{width:34px;height:34px;border-radius:50%;background:#e7f4ef;font-size:20px}
+.route-preview-image-wrap{border-radius:19px;overflow:hidden;background:#eaf5f0;border:1px solid #fff;min-height:180px;display:grid;place-items:center}
+.route-preview-image{display:block;width:100%;height:auto;max-height:58dvh;object-fit:contain}
+.route-preview-actions{display:flex;gap:9px;margin-top:13px}
+.route-preview-actions button{flex:1;min-width:0;padding:14px 10px;border-radius:16px;font-size:11px;font-weight:850}
+.route-preview-share{background:linear-gradient(120deg,#8cdec0,#a8e1ed);box-shadow:0 7px 18px #8bd4bf55}
+.route-preview-cancel{background:#ffffffc9;border:1px solid #fff}
+.route-preview-hint{font-size:10px;color:#78918a;text-align:center;margin-top:10px;line-height:1.5}
+
 </style>
 </head>
 <body><main class="app">
@@ -88,6 +104,14 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 </section>
 <nav class="bottom-nav" aria-label="Main navigation"><div class="nav-indicator" id="indicator" style="pointer-events:none"></div><button class="nav-btn active" type="button" data-tab="health">HEALTH</button><button class="nav-btn" type="button" data-tab="sport">SPORT</button><button class="nav-btn" type="button" data-tab="profile">PROFILE</button></nav>
 <div class="toast" id="toast"></div>
+<div class="route-preview-overlay" id="routePreviewModal" role="dialog" aria-modal="true" aria-labelledby="routePreviewTitle">
+ <div class="route-preview-panel">
+  <div class="route-preview-head"><strong id="routePreviewTitle">ROUTE SHARE PREVIEW</strong><button class="route-preview-close" id="closeRoutePreview" type="button" aria-label="Close preview">×</button></div>
+  <div class="route-preview-image-wrap"><img class="route-preview-image" id="routePreviewImage" alt="Preview of your M FIT activity route"></div>
+  <div class="route-preview-actions"><button class="route-preview-share" id="confirmRouteShare" type="button">↗ SHARE IMAGE</button><button class="route-preview-cancel" id="cancelRouteShare" type="button">CANCEL</button></div>
+  <div class="route-preview-hint">Review the image first. Your phone's share menu opens only after you tap SHARE IMAGE.</div>
+ </div>
+</div>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -103,7 +127,7 @@ let activityDb=null,activityStoreReady=false,activityStoreInitPromise=null,histo
 const activityTrackCache=new WeakMap();
 let liveMap=null,routeLayer=null,currentMarker=null,userLocationMarker=null,mapStyle=data.mapStyle||'street',streetTiles=null,satelliteTiles=null,satelliteFallbackTiles=null;
 function setMapStyle(style){if(!liveMap)return;mapStyle=style;const next=style==='satellite'?(satelliteFallbackTiles||satelliteTiles):streetTiles,other=style==='satellite'?streetTiles:(satelliteFallbackTiles||satelliteTiles);if(other&&liveMap.hasLayer(other))liveMap.removeLayer(other);if(next&&!liveMap.hasLayer(next))next.addTo(liveMap);$('mapStyleToggle').textContent=style==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=style==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';if(style==='satellite')$('mapNote').textContent='Loading satellite imagery…';data.mapStyle=style;save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),120)}
-function initLiveMap(){if(liveMap||!window.L)return;liveMap=L.map('liveMap',{zoomControl:true}).setView([20,0],2);streetTiles=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{subdomains:['a','b','c'],maxZoom:19,attribution:'&copy; OpenStreetMap contributors &copy; CyclOSM'});satelliteTiles=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});let satelliteLoaded=false,satelliteErrors=0;const useSatelliteFallback=()=>{if(satelliteLoaded||satelliteFallbackTiles||mapStyle!=='satellite'||!liveMap)return;if(liveMap.hasLayer(satelliteTiles))liveMap.removeLayer(satelliteTiles);satelliteFallbackTiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});satelliteFallbackTiles.on('tileload',()=>{$('mapNote').textContent='Satellite imagery · Esri'});satelliteFallbackTiles.on('tileerror',()=>{$('mapNote').textContent='Satellite imagery could not load. Check your connection.'});satelliteFallbackTiles.addTo(liveMap)};satelliteTiles.on('tileload',()=>{satelliteLoaded=true;if(mapStyle==='satellite')$('mapNote').textContent='Satellite imagery · Esri'});satelliteTiles.on('tileerror',()=>{satelliteErrors++;if(satelliteErrors>=3)useSatelliteFallback()});(mapStyle==='satellite'?satelliteTiles:streetTiles).addTo(liveMap);routeLayer=L.polyline([],{color:'#36b98e',weight:5,opacity:.95}).addTo(liveMap);$('mapStyleToggle').textContent=mapStyle==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=mapStyle==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';$('mapStyleToggle').onclick=()=>setMapStyle(mapStyle==='street'?'satellite':'street');setTimeout(()=>liveMap.invalidateSize(),250);}
+function initLiveMap(){if(liveMap||!window.L)return;liveMap=L.map('liveMap',{zoomControl:true}).setView([20,0],2);streetTiles=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{subdomains:['a','b','c'],maxZoom:19,crossOrigin:'anonymous',attribution:'&copy; OpenStreetMap contributors &copy; CyclOSM'});satelliteTiles=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});let satelliteLoaded=false,satelliteErrors=0;const useSatelliteFallback=()=>{if(satelliteLoaded||satelliteFallbackTiles||mapStyle!=='satellite'||!liveMap)return;if(liveMap.hasLayer(satelliteTiles))liveMap.removeLayer(satelliteTiles);satelliteFallbackTiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});satelliteFallbackTiles.on('tileload',()=>{$('mapNote').textContent='Satellite imagery · Esri'});satelliteFallbackTiles.on('tileerror',()=>{$('mapNote').textContent='Satellite imagery could not load. Check your connection.'});satelliteFallbackTiles.addTo(liveMap)};satelliteTiles.on('tileload',()=>{satelliteLoaded=true;if(mapStyle==='satellite')$('mapNote').textContent='Satellite imagery · Esri'});satelliteTiles.on('tileerror',()=>{satelliteErrors++;if(satelliteErrors>=3)useSatelliteFallback()});(mapStyle==='satellite'?satelliteTiles:streetTiles).addTo(liveMap);routeLayer=L.polyline([],{color:'#36b98e',weight:5,opacity:.95}).addTo(liveMap);$('mapStyleToggle').textContent=mapStyle==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=mapStyle==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';$('mapStyleToggle').onclick=()=>setMapStyle(mapStyle==='street'?'satellite':'street');setTimeout(()=>liveMap.invalidateSize(),250);}
 if(!data.waterResetToZeroV1){day.water=0;data.waterResetToZeroV1=true;}
 if(data.waterDate!==localDayKey()){day.water=0;data.waterDate=localDayKey()}
 const save=()=>{data.days[todayKey]=day;data.waterDate=localDayKey();const payload=activityStoreReady?{...data}:data;if(activityStoreReady)delete payload.history;localStorage.setItem(key,JSON.stringify(payload))};
@@ -413,22 +437,52 @@ $('clearActivityHistory').onclick=clearActivityHistory;
    ctx.restore();ctx.fillStyle='#183e35';ctx.font='700 48px system-ui';ctx.fillText(stats.mode,105,1130);const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['CALORIES',stats.kcal+' kcal']];metrics.forEach((m,i)=>{const x=105+i*345;ctx.fillStyle='#eaf5ef';ctx.beginPath();ctx.roundRect(x,1180,310,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='600 22px system-ui';ctx.fillText(m[0],x+25,1225);ctx.fillStyle='#183e35';ctx.font='700 36px system-ui';ctx.fillText(m[1],x+25,1285)});ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(new Date().toLocaleDateString(),105,1380);canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
   });
  }
- function downloadRouteImage(file){const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='mfit-route.png';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},15000);toast('عکس مسیر در پوشه Downloads ذخیره شد')}
- $('exportRoute').onclick=async()=>{
-  const saved=(data.history||[])[0],route=coords.length?coords:(saved?.coords||[]);
-  if(!route.length){toast('اول یک فعالیت GPS ثبت کن و ذخیره‌اش کن');return}
-  const modeName=coords.length?mode:(saved?.mode||'Activity'),km=coords.length?distance:Number(saved?.distance||0),seconds=coords.length?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=estimateActivityCalories(modeName,km,seconds);
+ let pendingRouteShareFile=null,pendingRoutePreviewUrl=null;
+function closeRoutePreview(){
+ const modal=$('routePreviewModal');if(modal)modal.classList.remove('open');
+ if(pendingRoutePreviewUrl){URL.revokeObjectURL(pendingRoutePreviewUrl);pendingRoutePreviewUrl=null}
+ pendingRouteShareFile=null;
+}
+function showRoutePreview(file){
+ closeRoutePreview();pendingRouteShareFile=file;pendingRoutePreviewUrl=URL.createObjectURL(file);
+ $('routePreviewImage').src=pendingRoutePreviewUrl;$('routePreviewModal').classList.add('open');
+}
+function downloadRouteImage(file){
+ const url=URL.createObjectURL(file),a=document.createElement('a');a.href=url;a.download='mfit-route.png';a.style.display='none';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},15000);toast('عکس مسیر در پوشه Downloads ذخیره شد')
+}
+$('closeRoutePreview').onclick=closeRoutePreview;
+$('cancelRouteShare').onclick=closeRoutePreview;
+$('routePreviewModal').addEventListener('click',e=>{if(e.target===$('routePreviewModal'))closeRoutePreview()});
+$('confirmRouteShare').onclick=async()=>{
+ const file=pendingRouteShareFile;if(!file)return;
+ if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+  try{await navigator.share({title:'M FIT route',text:'مسیر فعالیت من در M FIT',files:[file]});closeRoutePreview();toast('عکس مسیر برای اشتراک‌گذاری ارسال شد');return}
+  catch(e){if(e.name==='AbortError'){toast('اشتراک‌گذاری لغو شد');return}console.warn('M FIT route share failed:',e)}
+ }
+ downloadRouteImage(file);closeRoutePreview();
+};
+$('exportRoute').onclick=async()=>{
+ const saved=(data.history||[])[0],route=coords.length?coords:(saved?.coords||[]);
+ if(!route.length){toast('اول یک فعالیت GPS ثبت کن و ذخیره‌اش کن');return}
+ const modeName=coords.length?mode:(saved?.mode||'Activity'),km=coords.length?distance:Number(saved?.distance||0),seconds=coords.length?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=estimateActivityCalories(modeName,km,seconds);
+ if(!window.L){toast('نقشه هنوز آماده نیست؛ دوباره تلاش کن');return}
+ try{
+  if(!liveMap)initLiveMap();
+  const activityEnd=coords.length?Date.now():(Number(saved?.timestamp)||Date.now());
+  const weather=await getRouteWeather(route,activityEnd,seconds);
+  const oldCenter=liveMap.getCenter(),oldZoom=liveMap.getZoom();
   try{
-   const activityEnd=coords.length?Date.now():(Number(saved?.timestamp)||Date.now());const weather=await getRouteWeather(route,activityEnd,seconds);
+   const bounds=L.latLngBounds(route.map(p=>[Number(p.lat),Number(p.lon)]));
+   if(!bounds.isValid())throw new Error('Invalid route coordinates');
+   liveMap.invalidateSize();liveMap.fitBounds(bounds,{padding:[28,28],maxZoom:16,animate:false});
+   await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};liveMap.once('moveend',finish);setTimeout(finish,500)});
+   const activeTiles=mapStyle==='satellite'?(satelliteFallbackTiles||satelliteTiles):streetTiles;
+   if(activeTiles)await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};activeTiles.once('load',finish);setTimeout(finish,1700)});
    const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather});
-   const file=new File([blob],'mfit-route.png',{type:'image/png'});
-   if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-    try{await navigator.share({title:'M FIT route',text:'مسیر فعالیت من در M FIT',files:[file]});toast('عکس مسیر برای اشتراک‌گذاری ارسال شد');return}
-    catch(e){if(e.name==='AbortError'){toast('اشتراک‌گذاری لغو شد');return}}
-   }
-   downloadRouteImage(file);
-  }catch(e){toast('ساخت عکس مسیر ناموفق بود؛ دوباره تلاش کن')}
- };
+   showRoutePreview(new File([blob],'mfit-route.png',{type:'image/png'}));
+  }finally{liveMap.setView(oldCenter,oldZoom,{animate:false})}
+ }catch(e){console.error('M FIT route image generation failed:',e);toast('ساخت تصویر مسیر ناموفق بود؛ نقشه را باز کن و پس از بارگذاری دوباره تلاش کن')}
+};
 function resetDailySteps(){day.steps=0;data.days[todayKey]=day;localStorage.setItem(key,JSON.stringify(data));$('steps').innerHTML='0 <span class="metric-unit">steps</span>';$('stepbar').style.width='0%';renderWeek();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')}
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 enableMotion(false);try{render();renderHistory();}catch(initError){console.error('M FIT render initialization:',initError)}

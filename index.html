@@ -370,7 +370,7 @@ const photoCrop=(()=>{
  const paint=()=>{preview.style.width=(baseW*scale)+'px';preview.style.height=(baseH*scale)+'px';preview.style.left=x+'px';preview.style.top=y+'px'};
  const clamp=()=>{const w=baseW*scale,h=baseH*scale;x=Math.min(0,Math.max(stage.clientWidth-w,x));y=Math.min(0,Math.max(stage.clientHeight-h,y));paint()};
  const close=()=>{root.classList.remove('open');source=null;preview.removeAttribute('src');$('profilePhotoInput').value=''};
- const open=img=>{source=img;const side=stage.clientWidth;const fit=Math.max(side/img.naturalWidth,side/img.naturalHeight);baseW=img.naturalWidth*fit;baseH=img.naturalHeight*fit;scale=1;x=(side-baseW)/2;y=(side-baseH)/2;zoom.value='1';paint();root.classList.add('open')};
+ const open=img=>{source=img;preview.src=img.src;const side=stage.clientWidth;const fit=Math.max(side/img.naturalWidth,side/img.naturalHeight);baseW=img.naturalWidth*fit;baseH=img.naturalHeight*fit;scale=1;x=(side-baseW)/2;y=(side-baseH)/2;zoom.value='1';paint();root.classList.add('open')};
  stage.addEventListener('pointerdown',e=>{if(!source)return;drag={x:e.clientX,y:e.clientY,left:x,top:y};stage.setPointerCapture(e.pointerId)});
  stage.addEventListener('pointermove',e=>{if(!drag)return;x=drag.left+e.clientX-drag.x;y=drag.top+e.clientY-drag.y;clamp()});
  const end=()=>{drag=null};stage.addEventListener('pointerup',end);stage.addEventListener('pointercancel',end);

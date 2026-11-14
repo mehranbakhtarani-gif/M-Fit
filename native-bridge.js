@@ -8,32 +8,41 @@ const MfitMotion = registerPlugin('MfitMotion');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
-  let languages = [];
-  let voices = [];
-  try {
-    const result = await TextToSpeech.getSupportedLanguages();
-    languages = Array.isArray(result?.languages) ? result.languages : [];
-  } catch (error) { /* Some engines expose voices but not a language list. */ }
-  try {
-    const result = await TextToSpeech.getSupportedVoices();
-    voices = Array.isArray(result?.voices) ? result.voices : [];
-  } catch (error) { /* Fall back to the engine language list. */ }
-
   const normalize = value => String(value || '').trim().toLowerCase().replace('_', '-');
-  const persianVoice = voices.find(voice => normalize(voice.lang) === 'fa-ir')
-    || voices.find(voice => normalize(voice.lang).startsWith('fa-'))
-    || voices.find(voice => normalize(voice.lang) === 'fa');
-  const persianLanguage = languages.find(language => normalize(language) === 'fa-ir')
-    || languages.find(language => normalize(language).startsWith('fa-'))
-    || languages.find(language => normalize(language) === 'fa');
-  const language = persianVoice?.lang || persianLanguage || null;
-  return {
-    available: Boolean(language),
-    language,
-    voiceName: persianVoice?.name || null,
-    languages,
-    voices: voices.filter(voice => normalize(voice.lang).startsWith('fa'))
-  };
+  let lastInfo = { available: false, language: null, voiceName: null, languages: [], voices: [] };
+
+  // Android's TextToSpeech service can take a moment to initialize after app launch.
+  // Retry empty results before telling the user that Persian is not installed.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    let languages = [];
+    let voices = [];
+    try {
+      const result = await TextToSpeech.getSupportedLanguages();
+      languages = Array.isArray(result?.languages) ? result.languages : [];
+    } catch (error) { /* Some engines expose voices but not a language list. */ }
+    try {
+      const result = await TextToSpeech.getSupportedVoices();
+      voices = Array.isArray(result?.voices) ? result.voices : [];
+    } catch (error) { /* Fall back to the engine language list. */ }
+
+    const persianVoice = voices.find(voice => normalize(voice.lang) === 'fa-ir')
+      || voices.find(voice => normalize(voice.lang).startsWith('fa-'))
+      || voices.find(voice => normalize(voice.lang) === 'fa');
+    const persianLanguage = languages.find(language => normalize(language) === 'fa-ir')
+      || languages.find(language => normalize(language).startsWith('fa-'))
+      || languages.find(language => normalize(language) === 'fa');
+    const language = persianVoice?.lang || persianLanguage || null;
+    lastInfo = {
+      available: Boolean(language),
+      language,
+      voiceName: persianVoice?.name || null,
+      languages,
+      voices: voices.filter(voice => normalize(voice.lang).startsWith('fa'))
+    };
+    if (lastInfo.available) return lastInfo;
+    if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  return lastInfo;
 }
 
 window.MfitNativeTTS = {

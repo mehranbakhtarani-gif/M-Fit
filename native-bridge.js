@@ -50,7 +50,7 @@ window.MfitNativeTTS = {
       lang: info.language,
       rate: 0.94,
       pitch: 1,
-      volume: 1,
+      volume: Math.max(0, Math.min(1, Number(window.MfitVoiceVolume ?? 0.75))),
       queueStrategy: 0
     });
   },

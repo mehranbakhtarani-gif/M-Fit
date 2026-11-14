@@ -58,6 +58,13 @@ jobs:
               import subprocess
               subprocess.run(["node", "--check", str(path)], check=True)
           PY
+      - name: Download offline Persian voice engine
+        run: |
+          mkdir -p assets/tts
+          base="https://raw.githubusercontent.com/gyroing/Persian-Piper-TTS-WebAssembly/master"
+          for file in sherpa-onnx.js sherpa-onnx-wasm-main.js sherpa-onnx-wasm-main.wasm sherpa-onnx-wasm-main.data LICENSE; do
+            curl --fail --location --retry 3 --retry-delay 2 "$base/$file" -o "assets/tts/$file"
+          done
       - name: Prepare web app
         run: npm run prepare:web
       - name: Generate Android project

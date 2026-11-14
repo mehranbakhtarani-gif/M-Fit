@@ -105,14 +105,18 @@ function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
 let motionOn=false,lastStepAt=0,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
+const motionGrantKey='mfit-motion-permission-v1';
 async function enableMotion(fromUserGesture=false){
  try{
   if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';return}
   if(motionOn)return;
-  if(typeof DeviceMotionEvent.requestPermission==='function'){
+  const needsGesture=typeof DeviceMotionEvent.requestPermission==='function';
+  const alreadyGranted=localStorage.getItem(motionGrantKey)==='granted';
+  if(needsGesture&&!alreadyGranted){
    if(!fromUserGesture){$('motionStatus').textContent='Tap START ACTIVITY once to grant motion permission';return}
    const permission=await DeviceMotionEvent.requestPermission();
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
+   try{localStorage.setItem(motionGrantKey,'granted')}catch(storageError){}
   }
   motionOn=true;peak=0;wasRising=false;gravityReady=false;
   window.addEventListener('devicemotion',onMotion,{passive:true});

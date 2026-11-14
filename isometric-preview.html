@@ -70,6 +70,7 @@ h1{font-size:29px;letter-spacing:-.06em;margin:0 0 5px;font-weight:900}.sub{font
 (()=>{
  const fa=/[\u0600-\u06FF]/,ignored=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','PRE','CODE','SVG']);
  function wrap(node){if(!node||node.nodeType!==Node.TEXT_NODE||!fa.test(node.nodeValue||''))return;const p=node.parentElement;if(!p||ignored.has(p.tagName)||p.closest('bdi.mfit-fa-bidi'))return;const b=document.createElement('bdi');b.className='mfit-fa-bidi';b.setAttribute('dir','auto');p.replaceChild(b,node);b.appendChild(node);if(!['BODY','HTML','HEAD'].includes(p.tagName))p.classList.add('mfit-has-persian')}
+ function setControls(root){if(root.nodeType!==Node.ELEMENT_NODE)return;const selector='input:not([type=number]):not([type=date]):not([type=time]):not([type=range]),textarea';if(root.matches(selector))root.setAttribute('dir','auto');root.querySelectorAll(selector).forEach(el=>el.setAttribute('dir','auto'))}
  function scan(root){if(!root)return;if(root.nodeType===Node.TEXT_NODE){wrap(root);return}if(root.nodeType!==Node.ELEMENT_NODE||ignored.has(root.tagName)||root.closest('bdi.mfit-fa-bidi'))return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];while(w.nextNode())a.push(w.currentNode);a.forEach(wrap)}
  scan(document.body);new MutationObserver(records=>records.forEach(r=>{if(r.type==='characterData')wrap(r.target);r.addedNodes&&r.addedNodes.forEach(scan)})).observe(document.body,{subtree:true,childList:true,characterData:true});
 })();

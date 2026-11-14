@@ -127,7 +127,7 @@ let activityDb=null,activityStoreReady=false,activityStoreInitPromise=null,histo
 const activityTrackCache=new WeakMap();
 let liveMap=null,routeLayer=null,currentMarker=null,userLocationMarker=null,mapStyle=data.mapStyle||'street',streetTiles=null,satelliteTiles=null,satelliteFallbackTiles=null;
 function setMapStyle(style){if(!liveMap)return;mapStyle=style;const next=style==='satellite'?(satelliteFallbackTiles||satelliteTiles):streetTiles,other=style==='satellite'?streetTiles:(satelliteFallbackTiles||satelliteTiles);if(other&&liveMap.hasLayer(other))liveMap.removeLayer(other);if(next&&!liveMap.hasLayer(next))next.addTo(liveMap);$('mapStyleToggle').textContent=style==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=style==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';if(style==='satellite')$('mapNote').textContent='Loading satellite imagery…';data.mapStyle=style;save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),120)}
-function initLiveMap(){if(liveMap||!window.L)return;liveMap=L.map('liveMap',{zoomControl:true}).setView([20,0],2);streetTiles=L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',{subdomains:['a','b','c'],maxZoom:19,crossOrigin:'anonymous',attribution:'&copy; OpenStreetMap contributors &copy; CyclOSM'});satelliteTiles=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});let satelliteLoaded=false,satelliteErrors=0;const useSatelliteFallback=()=>{if(satelliteLoaded||satelliteFallbackTiles||mapStyle!=='satellite'||!liveMap)return;if(liveMap.hasLayer(satelliteTiles))liveMap.removeLayer(satelliteTiles);satelliteFallbackTiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});satelliteFallbackTiles.on('tileload',()=>{$('mapNote').textContent='Satellite imagery · Esri'});satelliteFallbackTiles.on('tileerror',()=>{$('mapNote').textContent='Satellite imagery could not load. Check your connection.'});satelliteFallbackTiles.addTo(liveMap)};satelliteTiles.on('tileload',()=>{satelliteLoaded=true;if(mapStyle==='satellite')$('mapNote').textContent='Satellite imagery · Esri'});satelliteTiles.on('tileerror',()=>{satelliteErrors++;if(satelliteErrors>=3)useSatelliteFallback()});(mapStyle==='satellite'?satelliteTiles:streetTiles).addTo(liveMap);routeLayer=L.polyline([],{color:'#36b98e',weight:5,opacity:.95}).addTo(liveMap);$('mapStyleToggle').textContent=mapStyle==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=mapStyle==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';$('mapStyleToggle').onclick=()=>setMapStyle(mapStyle==='street'?'satellite':'street');setTimeout(()=>liveMap.invalidateSize(),250);}
+function initLiveMap(){if(liveMap||!window.L)return;liveMap=L.map('liveMap',{zoomControl:true}).setView([20,0],2);streetTiles=L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{subdomains:['a','b','c','d'],maxZoom:20,crossOrigin:'anonymous',attribution:'&copy; OpenStreetMap contributors &copy; CARTO'});satelliteTiles=L.tileLayer('https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});let satelliteLoaded=false,satelliteErrors=0;const useSatelliteFallback=()=>{if(satelliteLoaded||satelliteFallbackTiles||mapStyle!=='satellite'||!liveMap)return;if(liveMap.hasLayer(satelliteTiles))liveMap.removeLayer(satelliteTiles);satelliteFallbackTiles=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,crossOrigin:'anonymous',attribution:'Tiles &copy; Esri'});satelliteFallbackTiles.on('tileload',()=>{$('mapNote').textContent='Satellite imagery · Esri'});satelliteFallbackTiles.on('tileerror',()=>{$('mapNote').textContent='Satellite imagery could not load. Check your connection.'});satelliteFallbackTiles.addTo(liveMap)};satelliteTiles.on('tileload',()=>{satelliteLoaded=true;if(mapStyle==='satellite')$('mapNote').textContent='Satellite imagery · Esri'});satelliteTiles.on('tileerror',()=>{satelliteErrors++;if(satelliteErrors>=3)useSatelliteFallback()});(mapStyle==='satellite'?satelliteTiles:streetTiles).addTo(liveMap);routeLayer=L.polyline([],{color:'#36b98e',weight:5,opacity:.95}).addTo(liveMap);$('mapStyleToggle').textContent=mapStyle==='satellite'?'STREET':'SATELLITE';$('mapBadge').textContent=mapStyle==='satellite'?'LIVE MAP · SATELLITE':'LIVE MAP · STREET';$('mapStyleToggle').onclick=()=>setMapStyle(mapStyle==='street'?'satellite':'street');setTimeout(()=>liveMap.invalidateSize(),250);}
 if(!data.waterResetToZeroV1){day.water=0;data.waterResetToZeroV1=true;}
 if(data.waterDate!==localDayKey()){day.water=0;data.waterDate=localDayKey()}
 const save=()=>{data.days[todayKey]=day;data.waterDate=localDayKey();const payload=activityStoreReady?{...data}:data;if(activityStoreReady)delete payload.history;localStorage.setItem(key,JSON.stringify(payload))};
@@ -385,7 +385,7 @@ $('clearActivityHistory').onclick=clearActivityHistory;
    const archive=daysAgo>5;
    const params=new URLSearchParams({
     latitude:String(lat),longitude:String(lon),
-    hourly:'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code',
+    hourly:'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m',
     timezone:'auto'
    });
    if(archive){params.set('start_date',date);params.set('end_date',date)}
@@ -408,7 +408,7 @@ $('clearActivityHistory').onclick=clearActivityHistory;
    }
    if(index<0)return null;
    const n=(key)=>Number(hourly[key]?.[index]);
-   const code=n('weather_code'),temp=n('temperature_2m'),feels=n('apparent_temperature'),humidity=n('relative_humidity_2m');
+   const code=n('weather_code'),temp=n('temperature_2m'),feels=n('apparent_temperature'),humidity=n('relative_humidity_2m'),wind=n('wind_speed_10m');
    if(!Number.isFinite(temp)||!Number.isFinite(code))return null;
    const conditions=[
     [[0],'Clear'],[[1,2],'Partly cloudy'],[[3],'Cloudy'],[[45,48],'Fog'],
@@ -419,7 +419,7 @@ $('clearActivityHistory').onclick=clearActivityHistory;
    const match=conditions.find(entry=>entry[0].includes(code));
    const label=match?match[1]:'Weather';
    const icon=code===0?'☀':([1,2,3,45,48].includes(code)?'☁':([71,73,75,77,85,86].includes(code)?'❄':([95,96,99].includes(code)?'⚡':'☂')));
-   return {temp:Math.round(temp),feels:Number.isFinite(feels)?Math.round(feels):Math.round(temp),humidity:Number.isFinite(humidity)?Math.round(humidity):null,label,icon,localTime:hourly.time[index]};
+   return {temp:Math.round(temp),feels:Number.isFinite(feels)?Math.round(feels):Math.round(temp),humidity:Number.isFinite(humidity)?Math.round(humidity):null,wind:Number.isFinite(wind)?Math.round(wind):null,label,icon,localTime:hourly.time[index]};
   }catch(error){console.warn('M FIT route weather:',error);return null}
  }
  function routeImageBlob(route,stats){
@@ -429,12 +429,27 @@ $('clearActivityHistory').onclick=clearActivityHistory;
    if(!tiles.length){reject(new Error('Map tiles are not loaded yet. Open the map online and wait for tiles to load.'));return}
    const canvas=document.createElement('canvas');canvas.width=2400;canvas.height=3000;const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Canvas unavailable'));return}ctx.scale(2,2);
    const bg=ctx.createLinearGradient(0,0,1200,1500);bg.addColorStop(0,'#e9fff5');bg.addColorStop(1,'#e8f3ff');ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);
-   ctx.fillStyle='#fff';ctx.globalAlpha=.82;ctx.beginPath();ctx.roundRect(55,55,1090,1390,54);ctx.fill();ctx.globalAlpha=1;ctx.fillStyle='#183e35';ctx.font='700 54px system-ui';ctx.fillText('M FIT',105,155);ctx.fillStyle='#6b8c81';ctx.font='500 26px system-ui';ctx.fillText('YOUR ACTIVITY ROUTE · '+(mapStyle==='satellite'?'SATELLITE':'OUTDOOR MAP'),105,205);
-   const box={x:105,y:270,w:990,h:760},rect=mapEl.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle=mapStyle==='satellite'?'#26352d':'#e7eee9';ctx.fillRect(box.x,box.y,box.w,box.h);
+   ctx.fillStyle='rgba(255,255,255,.88)';ctx.beginPath();ctx.roundRect(55,55,1090,1390,54);ctx.fill();
+   ctx.fillStyle='#183e35';ctx.font='800 54px system-ui';ctx.fillText('M FIT',105,145);
+   ctx.fillStyle='#6b8c81';ctx.font='600 24px system-ui';ctx.fillText('YOUR ACTIVITY ROUTE',105,193);
+   const weather=stats.weather,wx={x:105,y:245,w:990,h:175};
+   ctx.save();ctx.shadowColor='rgba(31,65,82,.10)';ctx.shadowBlur=24;ctx.fillStyle='rgba(255,255,255,.84)';ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(wx.x,wx.y,wx.w,wx.h,32);ctx.fill();ctx.stroke();ctx.restore();
+   ctx.fillStyle='#edf6f8';ctx.beginPath();ctx.arc(wx.x+105,wx.y+86,54,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#d99b35';ctx.font='700 66px system-ui';ctx.textAlign='center';ctx.fillText(weather?weather.icon:'☁',wx.x+105,wx.y+108);ctx.textAlign='left';
+   ctx.fillStyle='#78909b';ctx.font='800 19px system-ui';ctx.fillText('WEATHER AT ACTIVITY TIME',wx.x+195,wx.y+48);
+   ctx.fillStyle='#183e35';ctx.font='800 66px system-ui';ctx.fillText(weather?weather.temp+'°':'—',wx.x+195,wx.y+119);
+   ctx.fillStyle='#607c78';ctx.font='600 24px system-ui';ctx.fillText(weather?weather.label:'Weather unavailable',wx.x+390,wx.y+111);
+   ctx.fillStyle='#82978f';ctx.font='500 18px system-ui';ctx.fillText(weather?(weather.wind!==null?'Wind '+weather.wind+' km/h':'')+(weather.humidity!==null?'   ·   Humidity '+weather.humidity+'%':''):'Historical weather data unavailable',wx.x+195,wx.y+151);
+   const box={x:105,y:455,w:990,h:600},rect=mapEl.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle='#edf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);
    try{for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}}catch(e){ctx.restore();reject(new Error('Map provider prevents exporting its tiles to an image.'));return}
    if(route.length){const pts=route.map(p=>{const q=liveMap.latLngToContainerPoint([Number(p.lat),Number(p.lon)]);return{x:box.x+q.x/rect.width*box.w,y:box.y+q.y/rect.height*box.h}});ctx.shadowColor='#168e6b88';ctx.shadowBlur=22;ctx.strokeStyle='#fff';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;ctx.strokeStyle='#20a879';ctx.lineWidth=15;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();for(const [p,color] of [[pts[0],'#168e6b'],[pts[pts.length-1],'#f08a55']]){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.fill()}}
-   const weather=stats.weather;const wx={x:box.x+box.w-315,y:box.y+22,w:290,h:132};ctx.save();ctx.shadowColor='rgba(31,65,82,.16)';ctx.shadowBlur=22;ctx.fillStyle='rgba(255,255,255,.88)';ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(wx.x,wx.y,wx.w,wx.h,25);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#edf6f8';ctx.beginPath();ctx.arc(wx.x+48,wx.y+51,30,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d99b35';ctx.font='700 42px system-ui';ctx.textAlign='center';ctx.fillText(weather?weather.icon:'☁',wx.x+48,wx.y+65);ctx.textAlign='left';ctx.fillStyle='#78909b';ctx.font='700 15px system-ui';ctx.fillText('WEATHER AT ACTIVITY',wx.x+91,wx.y+32);ctx.fillStyle='#183e35';ctx.font='700 47px system-ui';ctx.fillText(weather?weather.temp+'°':'—',wx.x+91,wx.y+83);ctx.fillStyle='#607c78';ctx.font='600 18px system-ui';ctx.fillText(weather?weather.label:'Weather unavailable',wx.x+91,wx.y+111);ctx.fillStyle='#82978f';ctx.font='500 15px system-ui';ctx.fillText(weather&&weather.humidity!==null?'Humidity '+weather.humidity+'%':'Historical conditions',wx.x+24,wx.y+125);ctx.restore();
-   ctx.restore();ctx.fillStyle='#183e35';ctx.font='700 48px system-ui';ctx.fillText(stats.mode,105,1130);const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['CALORIES',stats.kcal+' kcal']];metrics.forEach((m,i)=>{const x=105+i*345;ctx.fillStyle='#eaf5ef';ctx.beginPath();ctx.roundRect(x,1180,310,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='600 22px system-ui';ctx.fillText(m[0],x+25,1225);ctx.fillStyle='#183e35';ctx.font='700 36px system-ui';ctx.fillText(m[1],x+25,1285)});ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(new Date().toLocaleDateString(),105,1380);canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
+   ctx.restore();
+   ctx.fillStyle='#183e35';ctx.font='800 42px system-ui';ctx.fillText(stats.mode,105,1125);
+   const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['CALORIES',stats.kcal+' kcal']];
+   metrics.forEach((m,i)=>{const x=105+i*345;ctx.fillStyle='#edf6f1';ctx.beginPath();ctx.roundRect(x,1160,310,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='700 20px system-ui';ctx.fillText(m[0],x+25,1205);ctx.fillStyle='#183e35';ctx.font='800 36px system-ui';ctx.fillText(m[1],x+25,1265)});
+   ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(stats.activityDate||'',105,1375);
+   ctx.fillStyle='#91a69e';ctx.font='600 18px system-ui';ctx.textAlign='right';ctx.fillText('M FIT · MOVE WELL',1095,1375);ctx.textAlign='left';
+   canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
   });
  }
  let pendingRouteShareFile=null,pendingRoutePreviewUrl=null;
@@ -478,7 +493,7 @@ $('exportRoute').onclick=async()=>{
    await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};liveMap.once('moveend',finish);setTimeout(finish,500)});
    const activeTiles=mapStyle==='satellite'?(satelliteFallbackTiles||satelliteTiles):streetTiles;
    if(activeTiles)await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};activeTiles.once('load',finish);setTimeout(finish,1700)});
-   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather});
+   const activityDate=new Date(activityEnd-Math.max(0,seconds)*500).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather,activityDate});
    showRoutePreview(new File([blob],'mfit-route.png',{type:'image/png'}));
   }finally{liveMap.setView(oldCenter,oldZoom,{animate:false})}
  }catch(e){console.error('M FIT route image generation failed:',e);toast('ساخت تصویر مسیر ناموفق بود؛ نقشه را باز کن و پس از بارگذاری دوباره تلاش کن')}

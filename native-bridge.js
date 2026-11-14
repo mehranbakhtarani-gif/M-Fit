@@ -4,6 +4,7 @@ import { registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
+const MfitMotion = registerPlugin('MfitMotion');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
@@ -97,4 +98,20 @@ window.MfitNativeGPS = {
   isNative,
   startGps: (...args) => window.MfitNativeTTS.startGps(...args),
   stopGps: (id) => window.MfitNativeTTS.stopGps(id)
+};
+
+window.MfitNativeMotion = {
+  isNative,
+  listener: null,
+  async start(onStep) {
+    if (!isNative) return { available: false };
+    if (!this.listener) this.listener = await MfitMotion.addListener('step', event => {
+      if (onStep) onStep(Math.max(1, Number(event?.count) || 1));
+    });
+    return MfitMotion.start();
+  },
+  async stop() {
+    try { await MfitMotion.stop(); } catch (error) { /* Best-effort stop. */ }
+    if (this.listener) { await this.listener.remove(); this.listener = null; }
+  }
 };

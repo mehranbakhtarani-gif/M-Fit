@@ -358,7 +358,7 @@ function renderActivity(){
  $('avgSpeed').textContent=avg.toFixed(1);
  $('activityPace').textContent=pace>0?paceText(pace):'—:—';
  $('duration').textContent=fmt(seconds);
- $('sportCal').textContent=String(estimateActivityCalories(mode,km,seconds));
+ const activityKcal=estimateActivityCalories(mode,km,seconds);$('sportCal').textContent=String(activityKcal);const liveBurned=Math.max(0,Number(day.burned)||0)+(active?activityKcal:0);$('burned').innerHTML=Math.round(liveBurned).toLocaleString()+' <span class="metric-unit">kcal</span>';$('burnbar').style.width=Math.min(100,liveBurned/500*100)+'%';
  if(button){button.textContent=active?'PAUSE ACTIVITY':(activitySessionStarted?'RESUME ACTIVITY':'START ACTIVITY');button.classList.toggle('session-active',active);button.setAttribute('aria-pressed',active?'true':'false')}
  const pulse=$('activityPulse');if(pulse){pulse.classList.toggle('is-active',active);pulse.querySelector('.pulse-label').textContent=active?'ACTIVITY IN PROGRESS':(activitySessionStarted?'ACTIVITY PAUSED':'ACTIVITY STANDBY')}
 }
@@ -412,6 +412,12 @@ let motionSmooth=0,motionBaseline=0,previousDynamic=0,lastPeakAt=0,stepPeakTimes
 const motionGrantKey='mfit-motion-permission-v1';
 async function enableMotion(fromUserGesture=false){
  try{
+  if(window.MfitNativeMotion?.isNative){
+   if(motionOn)return;
+   const nativeResult=await window.MfitNativeMotion.start(count=>registerWalkingSteps(count));
+   if(nativeResult?.available){motionOn=true;$('motionStatus').textContent='Android step sensor active · walk naturally with your phone';return}
+   $('motionStatus').textContent='No hardware step sensor found · trying motion fallback';
+  }
   if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';return}
   if(motionOn)return;
   const needsGesture=typeof DeviceMotionEvent.requestPermission==='function';
@@ -513,6 +519,7 @@ function onMotion(e){
 function disableMotion(){
  if(!motionOn)return;
  motionOn=false;window.removeEventListener('devicemotion',onMotion);
+ if(window.MfitNativeMotion?.isNative)window.MfitNativeMotion.stop();
  $('motionStatus').textContent='Step counter paused';
 }
 $('addFood').onclick=()=>{let name=$('foodName').value.trim(),cal=Math.max(0,Number($('foodCal').value)||0);if(!name||!cal){toast('Enter food and calories');return}day.food.push({name,cal});$('foodName').value='';$('foodCal').value='';render()};

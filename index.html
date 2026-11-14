@@ -249,6 +249,21 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <script type="module">
 try {
  const Leaflet = await import('leaflet');
+ try {
+  const MapLibreModule = await import('maplibre-gl');
+  const MapLibreCore = MapLibreModule.default || MapLibreModule;
+  // MapLibre GL 6.3 needs RTL shaping for connected Persian/Arabic labels.
+  if (typeof MapLibreCore.setRTLTextPlugin === 'function') {
+   MapLibreCore.setRTLTextPlugin(
+    'https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.3.0/dist/mapbox-gl-rtl-text.js',
+    (error) => {
+     if (error) console.warn('Persian map label shaping could not be enabled:', error);
+     else window.MfitMapRTLReady = true;
+    },
+    true
+   );
+  }
+ } catch (rtlError) { console.warn('MapLibre RTL support could not be initialized:', rtlError); }
  window.L = Leaflet;
  try {
   const adapter = await import('https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/dist/leaflet-maplibre-gl.mjs');

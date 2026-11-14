@@ -1,1 +1,14 @@
-{"name":"M FIT — Wellness & Activity","short_name":"M FIT","start_url":"./","scope":"./","display":"standalone","background_color":"#f2fbf7","theme_color":"#eaf8f4","description":"Personal wellness and activity tracker","icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+  "name": "M FIT — Wellness & Activity",
+  "short_name": "Mfit",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1d2b",
+  "theme_color": "#102a3c",
+  "description": "Personal wellness and activity tracker",
+  "icons": [
+    { "src": "./icon-192.svg", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "./icon-512.svg", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

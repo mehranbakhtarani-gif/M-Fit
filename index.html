@@ -558,8 +558,12 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
   }
  }
  const startTime=$('fastStartTime');
- const currentLocalTime=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
- if(startTime){startTime.value=currentLocalTime();startTime.addEventListener('change',()=>{if(!state.fasting)save()})}
+ const timeInputValue=timestamp=>{const d=new Date(timestamp);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+ const currentLocalTime=()=>timeInputValue(Date.now());
+ if(startTime){
+  startTime.value=state.fasting&&state.start>0?timeInputValue(state.start):(state.startTime||currentLocalTime());
+  startTime.addEventListener('change',()=>{if(!state.fasting){state.startTime=startTime.value;save()}});
+ }
  const hours=$('fastHours');
  if(hours){
   hours.value=String(Math.max(1,Math.min(24,Number(state.target)||16)));
@@ -594,7 +598,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    if(state.fasting){state.fasting=false;state.start=0;state.completed=false}
    else{
     state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));
-    const now=new Date(),chosen=(startTime&&/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime.value))?startTime.value:currentLocalTime();const [hh,mm]=chosen.split(':').map(Number);const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);if(start.getTime()>now.getTime())start.setDate(start.getDate()-1);state.start=start.getTime();state.fasting=true;state.completed=false;
+    const now=new Date(),chosen=(startTime&&/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime.value))?startTime.value:currentLocalTime();const [hh,mm]=chosen.split(':').map(Number);const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);if(start.getTime()>now.getTime())start.setDate(start.getDate()-1);state.start=start.getTime();state.startTime=timeInputValue(state.start);state.fasting=true;state.completed=false;if(startTime)startTime.value=state.startTime;
     if('Notification' in window&&Notification.permission==='default'){
      try{Notification.requestPermission()}catch(e){}
     }

@@ -5,6 +5,8 @@
 <meta name="theme-color" content="#eef8f4"><title>M FIT · GPS Route City Preview</title>
 <link href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" rel="stylesheet">
 <style>
+.mfit-has-persian{text-align:right}bdi.mfit-fa-bidi{direction:auto;unicode-bidi:isolate}
+
 :root{--ink:#173d39;--muted:#76928a;--mint:#20bd91;--glass:rgba(255,255,255,.78)}
 *{box-sizing:border-box}body{margin:0;padding:15px;background:radial-gradient(ellipse at 8% 4%,#d4f4e6 0,transparent 35%),radial-gradient(ellipse at 95% 12%,#dbeaff 0,transparent 36%),linear-gradient(145deg,#f8fcfa,#edf5fb);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 .shell{width:min(680px,100%);margin:auto}.head{display:flex;justify-content:space-between;align-items:center;padding:8px 3px 15px}.brand{font-size:14px;font-weight:950;letter-spacing:.2em;direction:ltr}.brand span{color:#25b98d}.tag{font-size:9px;font-weight:900;letter-spacing:.1em;color:#397c68;background:#ffffffb5;border:1px solid #fff;padding:8px 11px;border-radius:99px}
@@ -57,4 +59,13 @@ document.getElementById('rotate').onclick=()=>map.easeTo({bearing:map.getBearing
 document.getElementById('reset').onclick=()=>map.easeTo({center:[-73.985,40.748],zoom:15.3,pitch:62,bearing:-34,duration:750});
 window.addEventListener('resize',()=>map.resize());
 })();
-</script></body></html>
+</script>
+<script>
+(()=>{
+ const fa=/[\u0600-\u06FF]/,ignored=new Set(['SCRIPT','STYLE','TEXTAREA','INPUT','PRE','CODE','SVG']);
+ function wrap(node){if(!node||node.nodeType!==Node.TEXT_NODE||!fa.test(node.nodeValue||''))return;const p=node.parentElement;if(!p||ignored.has(p.tagName)||p.closest('bdi.mfit-fa-bidi'))return;const b=document.createElement('bdi');b.className='mfit-fa-bidi';b.setAttribute('dir','auto');p.replaceChild(b,node);b.appendChild(node);if(!['BODY','HTML','HEAD'].includes(p.tagName))p.classList.add('mfit-has-persian')}
+ function scan(root){if(!root)return;if(root.nodeType===Node.TEXT_NODE){wrap(root);return}if(root.nodeType!==Node.ELEMENT_NODE||ignored.has(root.tagName)||root.closest('bdi.mfit-fa-bidi'))return;const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a=[];while(w.nextNode())a.push(w.currentNode);a.forEach(wrap)}
+ scan(document.body);new MutationObserver(records=>records.forEach(r=>{if(r.type==='characterData')wrap(r.target);r.addedNodes&&r.addedNodes.forEach(scan)})).observe(document.body,{subtree:true,childList:true,characterData:true});
+})();
+</script>
+</body></html>

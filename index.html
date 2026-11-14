@@ -285,6 +285,55 @@ document.querySelectorAll('[data-period]').forEach(b=>b.onclick=()=>{historyPeri
 function clearActivityHistory(){const count=(data.history||[]).length;if(!count){toast('No activity history to clear');return}if(!confirm('Delete all saved activity history on this device? This cannot be undone.'))return;data.history=[];save();renderHistory();render();toast('Activity history cleared')}
 $('clearActivityHistory').onclick=clearActivityHistory;
 function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(now);if(historyPeriod==='day')start.setHours(0,0,0,0);else if(historyPeriod==='week'){start.setHours(0,0,0,0);start.setDate(start.getDate()-((start.getDay()+6)%7))}else{start.setHours(0,0,0,0);start.setDate(1)}let h=all.filter(x=>{let t=x.timestamp?new Date(x.timestamp):new Date(x.date);return !isNaN(t)&&t>=start&&t<=now});$('history').innerHTML=h.length?h.map(x=>'<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5f0eb"><div><b style="font-size:12px">'+x.mode+'</b><div class="tiny">'+x.date+'</div></div><div style="text-align:right;font-size:11px"><b>'+Number(x.distance||0).toFixed(2)+' km</b><div class="tiny">'+fmt(x.duration||0).slice(0,5)+' · '+(x.kcal||0)+' kcal</div></div></div>').join(''):'<div class="tiny">No activities in this '+historyPeriod+'.</div>';$('history').insertAdjacentHTML('beforeend','<div class="tiny" style="padding-top:8px">'+h.length+' activities · '+h.reduce((a,x)=>a+Number(x.distance||0),0).toFixed(2)+' km total</div>')}
+ async function getRouteWeather(route,activityEnd,durationSeconds){
+  try{
+   if(!route||!route.length)return null;
+   const point=route[Math.floor(route.length/2)];
+   const lat=Number(point.lat),lon=Number(point.lon);
+   if(!Number.isFinite(lat)||!Number.isFinite(lon))return null;
+   const when=new Date((Number(activityEnd)||Date.now())-Math.max(0,Number(durationSeconds)||0)*500);
+   const date=when.toISOString().slice(0,10);
+   const daysAgo=(Date.now()-when.getTime())/86400000;
+   const archive=daysAgo>5;
+   const params=new URLSearchParams({
+    latitude:String(lat),longitude:String(lon),
+    hourly:'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code',
+    timezone:'auto'
+   });
+   if(archive){params.set('start_date',date);params.set('end_date',date)}
+   else{params.set('past_days','5');params.set('forecast_days','1')}
+   const endpoint=archive?'https://archive-api.open-meteo.com/v1/archive':'https://api.open-meteo.com/v1/forecast';
+   const response=await fetch(endpoint+'?'+params.toString());
+   if(!response.ok)throw new Error('Weather service unavailable');
+   const result=await response.json(),hourly=result.hourly;
+   if(!hourly||!hourly.time||!hourly.time.length)return null;
+   const parts=new Intl.DateTimeFormat('en-CA',{
+    timeZone:result.timezone||'UTC',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'
+   }).formatToParts(when);
+   const part=k=>parts.find(x=>x.type===k)?.value||'';
+   const hourKey=part('year')+'-'+part('month')+'-'+part('day')+'T'+part('hour');
+   let index=hourly.time.findIndex(t=>String(t).slice(0,13)===hourKey);
+   if(index<0){
+    const target=Date.UTC(Number(part('year')),Number(part('month'))-1,Number(part('day')),Number(part('hour')));
+    let best=Infinity;
+    hourly.time.forEach((t,i)=>{const m=String(t).match(/^(\\d{4})-(\\d{2})-(\\d{2})T(\\d{2})/);if(m){const v=Date.UTC(+m[1],+m[2]-1,+m[3],+m[4]),d=Math.abs(v-target);if(d<best){best=d;index=i}}});
+   }
+   if(index<0)return null;
+   const n=(key)=>Number(hourly[key]?.[index]);
+   const code=n('weather_code'),temp=n('temperature_2m'),feels=n('apparent_temperature'),humidity=n('relative_humidity_2m');
+   if(!Number.isFinite(temp)||!Number.isFinite(code))return null;
+   const conditions=[
+    [[0],'Clear'],[[1,2],'Partly cloudy'],[[3],'Cloudy'],[[45,48],'Fog'],
+    [[51,53,55,56,57],'Drizzle'],[[61,63,65,66,67],'Rain'],
+    [[71,73,75,77,85,86],'Snow'],[[80,81,82],'Showers'],
+    [[95,96,99],'Thunderstorm']
+   ];
+   const match=conditions.find(entry=>entry[0].includes(code));
+   const label=match?match[1]:'Weather';
+   const icon=code===0?'☀':([1,2,3,45,48].includes(code)?'☁':([71,73,75,77,85,86].includes(code)?'❄':([95,96,99].includes(code)?'⚡':'☂')));
+   return {temp:Math.round(temp),feels:Number.isFinite(feels)?Math.round(feels):Math.round(temp),humidity:Number.isFinite(humidity)?Math.round(humidity):null,label,icon,localTime:hourly.time[index]};
+  }catch(error){console.warn('M FIT route weather:',error);return null}
+ }
  function routeImageBlob(route,stats){
   return new Promise((resolve,reject)=>{
    if(!liveMap){reject(new Error('Live map is not initialized'));return}
@@ -296,6 +345,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
    const box={x:105,y:270,w:990,h:760},rect=mapEl.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle=mapStyle==='satellite'?'#26352d':'#e7eee9';ctx.fillRect(box.x,box.y,box.w,box.h);
    try{for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}}catch(e){ctx.restore();reject(new Error('Map provider prevents exporting its tiles to an image.'));return}
    if(route.length){const pts=route.map(p=>{const q=liveMap.latLngToContainerPoint([Number(p.lat),Number(p.lon)]);return{x:box.x+q.x/rect.width*box.w,y:box.y+q.y/rect.height*box.h}});ctx.shadowColor='#168e6b88';ctx.shadowBlur=22;ctx.strokeStyle='#fff';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;ctx.strokeStyle='#20a879';ctx.lineWidth=15;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();for(const [p,color] of [[pts[0],'#168e6b'],[pts[pts.length-1],'#f08a55']]){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.fill()}}
+   const weather=stats.weather;const wx={x:box.x+box.w-315,y:box.y+22,w:290,h:132};ctx.save();ctx.shadowColor='rgba(31,65,82,.16)';ctx.shadowBlur=22;ctx.fillStyle='rgba(255,255,255,.88)';ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(wx.x,wx.y,wx.w,wx.h,25);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#edf6f8';ctx.beginPath();ctx.arc(wx.x+48,wx.y+51,30,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d99b35';ctx.font='700 42px system-ui';ctx.textAlign='center';ctx.fillText(weather?weather.icon:'☁',wx.x+48,wx.y+65);ctx.textAlign='left';ctx.fillStyle='#78909b';ctx.font='700 15px system-ui';ctx.fillText('WEATHER AT ACTIVITY',wx.x+91,wx.y+32);ctx.fillStyle='#183e35';ctx.font='700 47px system-ui';ctx.fillText(weather?weather.temp+'°':'—',wx.x+91,wx.y+83);ctx.fillStyle='#607c78';ctx.font='600 18px system-ui';ctx.fillText(weather?weather.label:'Weather unavailable',wx.x+91,wx.y+111);ctx.fillStyle='#82978f';ctx.font='500 15px system-ui';ctx.fillText(weather&&weather.humidity!==null?'Humidity '+weather.humidity+'%':'Historical conditions',wx.x+24,wx.y+125);ctx.restore();
    ctx.restore();ctx.fillStyle='#183e35';ctx.font='700 48px system-ui';ctx.fillText(stats.mode,105,1130);const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['CALORIES',stats.kcal+' kcal']];metrics.forEach((m,i)=>{const x=105+i*345;ctx.fillStyle='#eaf5ef';ctx.beginPath();ctx.roundRect(x,1180,310,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='600 22px system-ui';ctx.fillText(m[0],x+25,1225);ctx.fillStyle='#183e35';ctx.font='700 36px system-ui';ctx.fillText(m[1],x+25,1285)});ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(new Date().toLocaleDateString(),105,1380);canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
   });
  }
@@ -305,7 +355,7 @@ function renderHistory(){let all=data.history||[],now=new Date(),start=new Date(
   if(!route.length){toast('اول یک فعالیت GPS ثبت کن و ذخیره‌اش کن');return}
   const modeName=coords.length?mode:(saved?.mode||'Activity'),km=coords.length?distance:Number(saved?.distance||0),seconds=coords.length?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=estimateActivityCalories(modeName,km,seconds);
   try{
-   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal});
+   const activityEnd=coords.length?Date.now():(Number(saved?.timestamp)||Date.now());const weather=await getRouteWeather(route,activityEnd,seconds);\n   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather});
    const file=new File([blob],'mfit-route.png',{type:'image/png'});
    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
     try{await navigator.share({title:'M FIT route',text:'مسیر فعالیت من در M FIT',files:[file]});toast('عکس مسیر برای اشتراک‌گذاری ارسال شد');return}

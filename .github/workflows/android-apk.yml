@@ -42,6 +42,22 @@ jobs:
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Check inline JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          html = Path("index.html").read_text(encoding="utf-8")
+          scripts = re.findall(r"<script(?:\\s[^>]*)?>(.*?)</script\\s*>", html, flags=re.I | re.S)
+          if not scripts:
+              raise SystemExit("No inline scripts found")
+          for index, script in enumerate(scripts):
+              path = Path(f"/tmp/mfit-inline-{index}.js")
+              path.write_text(script, encoding="utf-8")
+              print(f"Checking inline script {index + 1}/{len(scripts)}")
+              import subprocess
+              subprocess.run(["node", "--check", str(path)], check=True)
+          PY
       - name: Prepare web app
         run: npm run prepare:web
       - name: Generate Android project

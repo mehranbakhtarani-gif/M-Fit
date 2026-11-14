@@ -67,7 +67,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 .life-core:after{content:"";position:absolute;inset:15%;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.95),rgba(255,255,255,0) 70%);opacity:.9}
 .life-spark{position:absolute;width:5px;height:5px;border-radius:50%;background:#8ce2c5;box-shadow:0 0 9px rgba(90,202,166,.7);opacity:var(--particle-opacity);transition:opacity 1.8s ease,transform 1.8s ease}
 .life-spark-a{left:14px;top:25px;transform:translate(0,calc((1 - var(--particle-opacity)) * 8px))}.life-spark-b{right:12px;top:35px;width:4px;height:4px;transform:translate(0,calc((1 - var(--particle-opacity)) * -7px))}.life-spark-c{left:30px;bottom:10px;width:3px;height:3px;transform:translate(0,calc((1 - var(--particle-opacity)) * 6px))}
-.life-copy{min-width:0;flex:1}.life-copy h2{font-size:16px!important;letter-spacing:.06em;margin:0 0 5px!important;transition:color .8s ease}.life-copy p{font-size:11px!important;line-height:1.55!important}.life-basis{margin-top:8px;font-size:8px;letter-spacing:.09em;font-weight:800;color:#91aaa2}
+.life-copy{min-width:0;flex:1}.life-status-list{display:flex;flex-direction:column;justify-content:center;gap:15px;padding:4px 0}.life-status-row{display:flex;align-items:center;gap:9px;min-height:24px}.life-status-icon{width:24px;flex:0 0 24px;font-size:18px;line-height:1;text-align:center;filter:drop-shadow(0 2px 3px rgba(70,120,110,.12))}.life-status-row strong{font-size:11px;letter-spacing:.10em;font-weight:850;color:#4d9de0;transition:color 1s ease}.life-status-row.low strong{color:#df9851}.life-status-row.very-low strong{color:#d66d68}
 .life-pulse[data-level="low"] .life-core{filter:saturate(.72)}.life-pulse[data-level="balanced"] .life-core{filter:saturate(1.08)}.life-pulse[data-level="strong"] .life-core{filter:saturate(1.28) brightness(1.04)}
 @keyframes lifeOrbit{to{rotate:332deg}}@keyframes lifeOrbitReverse{to{rotate:-360deg}}@keyframes lifeBreath{0%,100%{scale:1}50%{scale:1.055}}
 @media(prefers-reduced-motion:reduce){.life-orbit-a,.life-orbit-b,.life-core{animation:none!important;transition-duration:.01ms!important}}
@@ -77,7 +77,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <header><div><div class="brand">M <span>FIT</span></div><div class="date" id="today"></div></div><button class="avatar header-avatar" id="headerAvatar" type="button" aria-label="Open profile"><span id="headerAvatarInitial">M</span><img id="headerAvatarImage" alt="Profile photo" hidden></button></header>
 <section id="health" class="page">
 <div class="eyebrow">YOUR WELLNESS SPACE</div><div class="hello">Feel good. Move better.</div>
-<div class="hero"><div class="eyebrow">DAILY READINESS</div><div class="readiness life-readiness" style="margin-top:10px"><div class="life-pulse" id="lifePulse" role="img" aria-label="Activity pulse visualization" style="--core-size:43px;--glow-size:9px;--orbit-scale:.78;--ring-opacity:.22;--particle-opacity:.12;--glow-color:rgba(112,154,163,.28)"><span class="life-halo"></span><span class="life-orbit life-orbit-a"></span><span class="life-orbit life-orbit-b"></span><span class="life-core"></span><i class="life-spark life-spark-a"></i><i class="life-spark life-spark-b"></i><i class="life-spark life-spark-c"></i></div><div class="life-copy"><h2 id="lifeStatus">BUILDING</h2><p id="lifeDescription">A little movement starts the pulse.</p><div class="life-basis">BASED ON TODAY’S MOVEMENT</div></div></div></div>
+<div class="hero"><div class="eyebrow">DAILY READINESS</div><div class="readiness life-readiness" style="margin-top:10px"><div class="life-pulse" id="lifePulse" role="img" aria-label="Activity pulse visualization" style="--core-size:43px;--glow-size:9px;--orbit-scale:.78;--ring-opacity:.22;--particle-opacity:.12;--glow-color:rgba(112,154,163,.28)"><span class="life-halo"></span><span class="life-orbit life-orbit-a"></span><span class="life-orbit life-orbit-b"></span><span class="life-core"></span><i class="life-spark life-spark-a"></i><i class="life-spark life-spark-b"></i><i class="life-spark life-spark-c"></i></div><div class="life-copy life-status-list" aria-label="Today’s activity and hydration status"><div class="life-status-row" id="activityStatusRow" aria-label="Activity status"><span class="life-status-icon" aria-hidden="true">👟</span><strong id="activityStatusText">LOW</strong></div><div class="life-status-row" id="waterStatusRow" aria-label="Water intake status"><span class="life-status-icon" aria-hidden="true">💧</span><strong id="waterStatusText">LOW</strong></div></div></div></div>
 <div class="section-head"><h3>Daily overview</h3><span class="tiny">LIVE TRACKING</span></div>
 <div class="grid2">
 <div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;height:32px;min-height:32px"><div class="tiny" id="motionStatus" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Always-on step counter · initializing</div><button class="pill" id="resetSteps" type="button" onclick="resetDailySteps()" style="width:54px;min-width:54px;flex:0 0 54px;padding:6px 0;font-size:10px;white-space:nowrap;border-color:#f0c7d0;color:#b94b64;position:relative;z-index:5;pointer-events:auto">RESET</button></div></div>
@@ -715,18 +715,21 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
 </script>
 
 <script>
-/* Smoothly morph the Life Pulse from the real step/calorie progress bars. */
+/* Smooth Life Pulse morph plus independent activity and water status. */
 (function(){
  const pulse=document.getElementById('lifePulse');
- const status=document.getElementById('lifeStatus');
- const description=document.getElementById('lifeDescription');
  const stepbar=document.getElementById('stepbar');
  const burnbar=document.getElementById('burnbar');
- if(!pulse||!status||!description||!stepbar||!burnbar)return;
+ const waterbar=document.getElementById('waterbar');
+ const activityText=document.getElementById('activityStatusText');
+ const activityRow=document.getElementById('activityStatusRow');
+ const waterText=document.getElementById('waterStatusText');
+ const waterRow=document.getElementById('waterStatusRow');
+ if(!pulse||!stepbar||!burnbar||!waterbar||!activityText||!activityRow||!waterText||!waterRow)return;
  const clamp=n=>Math.max(0,Math.min(1,n));
  function readProgress(el){const value=parseFloat(el.style.width);return clamp(Number.isFinite(value)?value/100:0)}
  function update(){
-  const steps=readProgress(stepbar),calories=readProgress(burnbar);
+  const steps=readProgress(stepbar),calories=readProgress(burnbar),water=readProgress(waterbar);
   const energy=clamp(steps*.72+calories*.28);
   const core=43+energy*17,glow=9+energy*22,orbit=.78+energy*.22,ring=.22+energy*.68,particles=.12+energy*.88;
   pulse.style.setProperty('--core-size',core.toFixed(1)+'px');
@@ -735,14 +738,15 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
   pulse.style.setProperty('--ring-opacity',ring.toFixed(3));
   pulse.style.setProperty('--particle-opacity',particles.toFixed(3));
   pulse.style.setProperty('--glow-color',energy<.35?'rgba(112,154,163,.30)':energy<.72?'rgba(81,183,170,.43)':'rgba(67,199,156,.66)');
-  if(energy<.35){pulse.dataset.level='low';status.textContent='BUILDING';description.textContent='A little movement starts the pulse.'}
-  else if(energy<.72){pulse.dataset.level='balanced';status.textContent='BALANCED';description.textContent='Your activity is building steadily.'}
-  else{pulse.dataset.level='strong';status.textContent='ACTIVE';description.textContent='You have built a strong activity rhythm today.'}
-  pulse.setAttribute('aria-label',status.textContent+'. '+description.textContent);
+  if(steps<.65){activityText.textContent='LOW';activityRow.classList.remove('balanced','very-low');activityRow.classList.add('low')}
+  else{activityText.textContent='BALANCED';activityRow.classList.remove('low','very-low');activityRow.classList.add('balanced')}
+  if(water<.625){waterText.textContent='LOW';waterRow.classList.remove('balanced','very-low');waterRow.classList.add('low')}
+  else{waterText.textContent='BALANCED';waterRow.classList.remove('low','very-low');waterRow.classList.add('balanced')}
+  pulse.dataset.level=energy<.35?'low':energy<.72?'balanced':'strong';
+  pulse.setAttribute('aria-label','Life Pulse. Activity '+activityText.textContent+'. Water '+waterText.textContent+'.');
  }
  const observer=new MutationObserver(update);
- observer.observe(stepbar,{attributes:true,attributeFilter:['style']});
- observer.observe(burnbar,{attributes:true,attributeFilter:['style']});
+ [stepbar,burnbar,waterbar].forEach(el=>observer.observe(el,{attributes:true,attributeFilter:['style']}));
  update();
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
 })();

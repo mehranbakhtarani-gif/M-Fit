@@ -502,9 +502,43 @@ function coachClock(sec){const m=Math.floor(sec/60),h=Math.floor(m/60);return h?
 function coachStart(){nextCoachKm=Math.floor(distance)+1;lastCoachTimeMark=Math.floor((elapsed+(active?(Date.now()-startedAt)/1000:0))/300);lastCoachReportedSpeed=distance>0?distance/Math.max(1,(elapsed/3600)):0;if(voiceCoachEnabled){if(!(window.MfitNativeTTS&&window.MfitNativeTTS.isNative)&&!('speechSynthesis'in window)){$('voiceCoachStatus').textContent='Speech is not supported on this device';return}if('speechSynthesis'in window)window.speechSynthesis.getVoices();coachSpeak('فعالیت شروع شد. من همراهتم. هر یک کیلومتر گزارش می‌دم. حرکت خوبی داشته باشی.')}}
 function coachProgress(previousDistance,currentDistance,seconds){if(!voiceCoachEnabled)return;let spoke=false;if(currentDistance>=nextCoachKm){const avg=seconds>0?currentDistance/(seconds/3600):0;coachSpeak('یک کیلومتر کامل شد. مسافت کل '+currentDistance.toFixed(1)+' کیلومتر. سرعت متوسط '+avg.toFixed(1)+' کیلومتر بر ساعت. '+'عالیه، همین طور ادامه بده.');nextCoachKm=Math.floor(currentDistance)+1;lastCoachReportedSpeed=avg;spoke=true}const mark=Math.floor(seconds/300);if(!spoke&&mark>lastCoachTimeMark&&seconds>=300){const avg=seconds>0?currentDistance/(seconds/3600):0;coachSpeak('زمان فعالیتت '+coachClock(seconds)+' است. مسافت طی شده '+currentDistance.toFixed(1)+' کیلومتر.'+' سرعت متوسط '+avg.toFixed(1)+' کیلومتر بر ساعت.');lastCoachTimeMark=mark;spoke=true}if(!spoke&&seconds>=120){const avg=seconds>0?currentDistance/(seconds/3600):0;if(lastCoachReportedSpeed>0&&avg>0&&Math.abs(avg-lastCoachReportedSpeed)/lastCoachReportedSpeed>.25){coachSpeak(avg>lastCoachReportedSpeed?'سرعتت بیشتر شده.':'سرعتت کمتر شده. با ریتم راحت خودت ادامه بده.');lastCoachReportedSpeed=avg}}}
 function coachSetStatus(){const b=$('voiceCoachToggle');if(!b)return;b.textContent=voiceCoachEnabled?'VOICE ON':'VOICE OFF';b.classList.toggle('off',!voiceCoachEnabled);$('voiceCoachStatus').textContent=voiceCoachEnabled?'Ready to join your activity':'Voice coach is off'}
-$('voiceCoachToggle').onclick=()=>{voiceCoachEnabled=!voiceCoachEnabled;if(!voiceCoachEnabled){if('speechSynthesis'in window)window.speechSynthesis.cancel();if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative)window.MfitNativeTTS.stop().catch(()=>{});}coachSetStatus();if(voiceCoachEnabled&&active)coachSpeak('مربی صوتی دوباره فعال شد.')};
+$('voiceCoachToggle').onclick=async()=>{
+  voiceCoachEnabled=!voiceCoachEnabled;
+  if(!voiceCoachEnabled){
+    if('speechSynthesis'in window)window.speechSynthesis.cancel();
+    if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative)window.MfitNativeTTS.stop().catch(()=>{});
+    coachSetStatus();
+    return;
+  }
+  coachSetStatus();
+  const nativeTts=window.MfitNativeTTS;
+  if(nativeTts&&nativeTts.isNative){
+    try{
+      const info=await nativeTts.getPersianVoiceInfo();
+      if(!info.available){
+        $('voiceCoachStatus').textContent='Opening Android Persian voice setup…';
+        await nativeTts.openPersianInstall();
+        $('voiceCoachStatus').textContent='Install or enable a Persian voice, then tap VOICE OFF and VOICE ON.';
+        return;
+      }
+      $('voiceCoachStatus').textContent='Testing Persian voice…';
+      await nativeTts.speak('سلام! مربی فارسی آماده است. از این به بعد همراه تمرینت هستم.');
+      $('voiceCoachStatus').textContent='Persian voice is ready';
+    }catch(error){
+      $('voiceCoachStatus').textContent='Persian voice setup required';
+      try{await nativeTts.openPersianInstall()}catch(openError){}
+    }
+    return;
+  }
+  coachSpeak('سلام! مربی فارسی آماده است. از این به بعد همراه تمرینت هستم.');
+};
 coachSetStatus();
-if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative){window.MfitNativeTTS.isPersianAvailable().then(ok=>{if(!ok)$('voiceCoachStatus').textContent='Persian voice not installed on this device'}).catch(()=>{});}
+if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative){
+  window.MfitNativeTTS.getPersianVoiceInfo().then(info=>{
+    if(!info.available)$('voiceCoachStatus').textContent='Persian voice missing · tap VOICE OFF then VOICE ON to set up';
+    else $('voiceCoachStatus').textContent='Persian voice ready'+(info.voiceName?' · '+info.voiceName:'');
+  }).catch(()=>{$('voiceCoachStatus').textContent='Could not check Android voice engine'});
+}
 
 function saveActiveSessionDraft(){try{if(!activitySessionStarted&&!active&&!elapsed&&!coords.length){localStorage.removeItem(activityDraftKey);return}const elapsedNow=Math.max(0,elapsed+(active&&startedAt?(Date.now()-startedAt)/1000:0));localStorage.setItem(activityDraftKey,JSON.stringify({version:1,mode,elapsed:elapsedNow,distance,coords:coords.slice(-5000),savedAt:Date.now(),wasActive:active}))}catch(error){console.warn('Mfit session checkpoint failed:',error)}}
 function clearActiveSessionDraft(){try{localStorage.removeItem(activityDraftKey)}catch(error){}}

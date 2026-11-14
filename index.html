@@ -74,7 +74,7 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <div class="grid2 profile-stats"><div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TOTAL</span></div><div class="metric-label">Activities</div><div class="metric-value" id="profileSessions">0</div></div><div class="glass"><div class="metric-top"><span class="metric-icon">⌁</span><span class="tiny">TOTAL</span></div><div class="metric-label">Distance</div><div class="metric-value" id="profileDistance">0.0 <span class="metric-unit">km</span></div></div><div class="glass"><div class="metric-top"><span class="metric-icon">✧</span><span class="tiny">ESTIMATE</span></div><div class="metric-label">Calories burned</div><div class="metric-value" id="profileCalories">0 <span class="metric-unit">kcal</span></div></div><div class="glass"><div class="metric-top"><span class="metric-icon">◷</span><span class="tiny">TODAY</span></div><div class="metric-label">Steps</div><div class="metric-value" id="profileSteps">0</div></div></div>
 <div class="tiny" style="text-align:center;margin:16px 8px;line-height:1.6">Your profile and activity history are stored on this device.</div>
 </section>
-<nav class="bottom-nav" aria-label="Main navigation"><div class="nav-indicator" id="indicator" style="pointer-events:none"></div><button class="nav-btn active" type="button" data-tab="health" onclick="showTab('health')">HEALTH</button><button class="nav-btn" type="button" data-tab="sport" onclick="showTab('sport')">SPORT</button><button class="nav-btn" type="button" data-tab="profile" onclick="showTab('profile')">PROFILE</button></nav>
+<nav class="bottom-nav" aria-label="Main navigation"><div class="nav-indicator" id="indicator" style="pointer-events:none"></div><button class="nav-btn active" type="button" data-tab="health">HEALTH</button><button class="nav-btn" type="button" data-tab="sport">SPORT</button><button class="nav-btn" type="button" data-tab="profile">PROFILE</button></nav>
 <div class="toast" id="toast"></div>
 </main>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -370,6 +370,25 @@ $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',
 enableMotion(false);try{render();renderHistory();}catch(initError){console.error('M FIT render initialization:',initError)}
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 
+</script>
+<script>
+/* Isolated navigation controller: keeps tab switching available even if another app module fails. */
+(function(){
+ const root=document.querySelector('.app');
+ const pages=()=>document.querySelectorAll('.page');
+ const buttons=()=>document.querySelectorAll('.bottom-nav .nav-btn');
+ window.showTab=function(tab){
+  if(!['health','sport','profile'].includes(tab))return;
+  pages().forEach(p=>p.classList.toggle('hidden',p.id!==tab));
+  buttons().forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  const indicator=document.getElementById('indicator');
+  if(indicator){indicator.classList.toggle('right',tab==='sport');indicator.classList.toggle('third',tab==='profile');indicator.style.transform=tab==='sport'?'translate3d(100%,0,0)':tab==='profile'?'translate3d(200%,0,0)':'translate3d(0,0,0)'}
+  if(root)root.scrollTop=0;
+  try{if(tab==='sport'&&typeof initLiveMap==='function'){initLiveMap();setTimeout(()=>{try{if(typeof liveMap!=='undefined'&&liveMap)liveMap.invalidateSize();if(typeof centerMapOnUser==='function')centerMapOnUser()}catch(e){}},180)}}catch(e){}
+  try{if(tab==='profile'&&typeof renderProfile==='function')renderProfile()}catch(e){}
+ };
+ buttons().forEach(b=>b.addEventListener('click',()=>window.showTab(b.dataset.tab),{passive:true}));
+})();
 </script>
 <script>
 (function(){

@@ -4,14 +4,49 @@ import { registerPlugin } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
-
 const isNative = Capacitor.isNativePlatform();
+
+async function getPersianTtsInfo() {
+  let languages = [];
+  let voices = [];
+  try {
+    const result = await TextToSpeech.getSupportedLanguages();
+    languages = Array.isArray(result?.languages) ? result.languages : [];
+  } catch (error) { /* Some engines expose voices but not a language list. */ }
+  try {
+    const result = await TextToSpeech.getSupportedVoices();
+    voices = Array.isArray(result?.voices) ? result.voices : [];
+  } catch (error) { /* Fall back to the engine language list. */ }
+
+  const normalize = value => String(value || '').trim().toLowerCase().replace('_', '-');
+  const persianVoice = voices.find(voice => normalize(voice.lang) === 'fa-ir')
+    || voices.find(voice => normalize(voice.lang).startsWith('fa-'))
+    || voices.find(voice => normalize(voice.lang) === 'fa');
+  const persianLanguage = languages.find(language => normalize(language) === 'fa-ir')
+    || languages.find(language => normalize(language).startsWith('fa-'))
+    || languages.find(language => normalize(language) === 'fa');
+  const language = persianVoice?.lang || persianLanguage || null;
+  return {
+    available: Boolean(language),
+    language,
+    voiceName: persianVoice?.name || null,
+    languages,
+    voices: voices.filter(voice => normalize(voice.lang).startsWith('fa'))
+  };
+}
+
 window.MfitNativeTTS = {
   isNative,
   async speak(text) {
+    const info = await getPersianTtsInfo();
+    if (!info.available) {
+      const error = new Error('PERSIAN_VOICE_NOT_INSTALLED');
+      error.code = 'PERSIAN_VOICE_NOT_INSTALLED';
+      throw error;
+    }
     return TextToSpeech.speak({
       text,
-      lang: 'fa-IR',
+      lang: info.language,
       rate: 0.94,
       pitch: 1,
       volume: 1,
@@ -21,9 +56,12 @@ window.MfitNativeTTS = {
   async stop() {
     return TextToSpeech.stop();
   },
+  async getPersianVoiceInfo() {
+    return getPersianTtsInfo();
+  },
   async isPersianAvailable() {
-    const result = await TextToSpeech.isLanguageSupported({ lang: 'fa-IR' });
-    return Boolean(result && result.supported);
+    const info = await getPersianTtsInfo();
+    return info.available;
   },
   async openPersianInstall() {
     return TextToSpeech.openInstall();

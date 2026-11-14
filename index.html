@@ -291,6 +291,7 @@ const activityDraftKey='mfit-active-session-v1';
 let voiceCoachEnabled=true,nextCoachKm=1,lastCoachTimeMark=0,lastCoachReportedSpeed=0,coachVoiceReady=false,currentSpeedKmh=0,gpsSpeedSamples=[];let coachVolume=Number(localStorage.getItem("mfitCoachVolume")||75)/100;window.MfitVoiceVolume=coachVolume;
 let activityDb=null,activityStoreReady=false,activityStoreInitPromise=null,historyVisibleCount=20;
 const activityTrackCache=new WeakMap();
+const mapStyleStorageKey='mfit-map-style-v1';
 let liveMap=null,routeLayer=null,currentMarker=null,userLocationMarker=null,mapStyle='street',streetTiles=null,satelliteTiles=null,satelliteFallbackTiles=null,openFreeMapLayer=null,openFreeMapStyle='liberty',mapInitRetryTimer=null,mapInitRetryCount=0;
 const openFreeMapStyles={liberty:'https://tiles.openfreemap.org/styles/liberty',positron:'https://tiles.openfreemap.org/styles/positron',bright:'https://tiles.openfreemap.org/styles/bright',dark:'https://tiles.openfreemap.org/styles/dark',fiord:'https://tiles.openfreemap.org/styles/fiord'};
 function setMapStyle(style){
@@ -319,7 +320,7 @@ function setMapStyle(style){
  else $('mapNote').textContent='OpenStreetMap · GPS route tracking ready';
  if(menu){menu.querySelectorAll('[data-map-style]').forEach(button=>button.classList.toggle('active',button.dataset.mapStyle===style))}
  if(toggle)toggle.textContent='MAP LAYERS⌄';
- data.mapStyle=style;save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),180);
+ data.mapStyle=style;try{localStorage.setItem(mapStyleStorageKey,style)}catch(error){}save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),180);
 }
 function initLiveMap(){
  if(liveMap)return;
@@ -339,7 +340,7 @@ function initLiveMap(){
   menu.querySelectorAll('[data-map-style]').forEach(button=>button.addEventListener('click',()=>{setMapStyle(button.dataset.mapStyle);menu.hidden=true;toggle.setAttribute('aria-expanded','false')}));
   document.addEventListener('click',event=>{if(!event.target.closest('.map-style')&&!event.target.closest('.map-layer-menu')){menu.hidden=true;toggle.setAttribute('aria-expanded','false')}});
  }
- const savedStyle=data.mapStyle&&(['street','satellite'].includes(data.mapStyle)||data.mapStyle.startsWith('ofm-'))?data.mapStyle:'street';
+ let rememberedStyle='';try{rememberedStyle=localStorage.getItem(mapStyleStorageKey)||''}catch(error){}const candidate=rememberedStyle||data.mapStyle||'street';const savedStyle=['street','satellite','ofm-liberty','ofm-positron','ofm-bright','ofm-dark','ofm-fiord'].includes(candidate)?candidate:'street';
  setMapStyle(savedStyle);
  setTimeout(()=>liveMap&&liveMap.invalidateSize(),250);
 }

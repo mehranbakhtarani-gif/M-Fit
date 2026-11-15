@@ -44,7 +44,7 @@ interface ActivityDao {
     suspend fun insertSession(session: ActivitySessionEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun restoreSessionIfMissing(session: ActivitySessionEntity)
+    suspend fun restoreSessionIfMissing(session: ActivitySessionEntity): Long
 
     @Query("UPDATE activity_sessions SET status = :status, endedAtMillis = :endedAt, elapsedMillis = :elapsed, distanceMeters = :distance, calories = :calories WHERE id = :id")
     suspend fun updateSession(
@@ -57,7 +57,7 @@ interface ActivityDao {
     )
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertPoint(point: ActivityTrackPointEntity)
+    suspend fun insertPoint(point: ActivityTrackPointEntity): Long
 
     @Query("SELECT * FROM activity_sessions WHERE status IN ('RUNNING', 'PAUSED') ORDER BY startedAtMillis DESC LIMIT 1")
     suspend fun findUnfinishedSession(): ActivitySessionEntity?

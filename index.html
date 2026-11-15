@@ -127,6 +127,26 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
   .nav-btn { height: 38px; }
 }
 
+
+.fast-time-trigger{display:inline-flex;align-items:center;justify-content:space-between;gap:18px;min-width:116px;margin-top:5px;padding:8px 12px;border-radius:14px;border:1px solid #ffffff;background:rgba(255,255,255,.72);color:#315f51;font-size:13px;font-weight:850;font-variant-numeric:tabular-nums;box-shadow:inset 0 1px 0 #fff,0 4px 12px rgba(94,153,141,.08)}
+.fast-time-trigger:disabled{opacity:.48}
+.fast-time-overlay{position:fixed;inset:0;z-index:10040;display:none;align-items:center;justify-content:center;padding:20px;isolation:isolate}
+.fast-time-overlay.open{display:flex}
+.fast-time-backdrop{position:absolute;inset:0;background:rgba(22,49,43,.34);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.fast-time-dialog{position:relative;z-index:1;width:min(340px,100%);padding:20px;border-radius:28px;background:linear-gradient(145deg,rgba(250,255,252,.97),rgba(230,247,241,.96) 58%,rgba(231,244,250,.97));border:1px solid #ffffff;box-shadow:0 24px 80px rgba(28,74,61,.25),inset 0 1px 0 #fff;animation:fastPickerIn .22s cubic-bezier(.2,.8,.2,1)}
+@keyframes fastPickerIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.fast-time-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.fast-time-dialog-head h3{font-size:17px;margin:5px 0 0}.fast-time-close{width:32px;height:32px;border-radius:50%;background:#ffffffb8;border:1px solid #fff;font-size:22px;color:#66877c;line-height:1}
+.fast-time-wheels{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px auto 10px;direction:ltr}
+.fast-time-wheel-group{display:flex;flex-direction:column;align-items:center;gap:7px}.fast-time-wheel-group>span{font-size:9px;font-weight:850;letter-spacing:.14em;color:#77918d}
+.fast-time-wheel{position:relative;width:86px;height:176px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y mandatory;scrollbar-width:none;border-radius:18px;background:linear-gradient(180deg,#ffffff8a,#ffffffc9 48%,#ffffff8a);border:1px solid #ffffff;box-shadow:inset 0 3px 12px rgba(104,157,143,.08);touch-action:pan-y;scroll-padding-block:66px}
+.fast-time-wheel::-webkit-scrollbar{display:none}
+.fast-time-wheel-item{height:44px;display:flex;align-items:center;justify-content:center;scroll-snap-align:center;font-size:17px;font-weight:700;color:#8aa59c;font-variant-numeric:tabular-nums}
+.fast-time-wheel-item.selected{color:#245e4e;font-size:22px;font-weight:900}
+.fast-time-wheel-spacer{height:66px;scroll-snap-align:none;pointer-events:none}
+.fast-time-wheel-separator{font-size:27px;font-weight:850;color:#62bfa2;margin-top:17px}
+.fast-time-preview{text-align:center;font-size:25px;font-weight:900;letter-spacing:.02em;color:#245e4e;font-variant-numeric:tabular-nums;margin:10px 0 18px}
+.fast-time-actions{display:flex;gap:9px}.fast-time-actions button{flex:1;min-height:42px}
+@media(prefers-reduced-motion:reduce){.fast-time-dialog{animation:none}}
 </style>
 </head>
 <body><main class="app">
@@ -140,7 +160,20 @@ input[type=number]{appearance:textfield} .hidden{display:none!important}.toast{p
 <div class="glass"><div class="metric-top"><span class="metric-icon">↗</span><span class="tiny">TODAY</span></div><div class="metric-label">Step count</div><div class="metric-value" id="steps">0 <span class="metric-unit">steps</span></div><div class="progress"><i id="stepbar" style="width:0%"></i></div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;height:32px;min-height:32px"><div class="tiny" id="motionStatus" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Always-on step counter · initializing</div><button class="pill" id="resetSteps" type="button" onclick="resetDailySteps()" style="width:54px;min-width:54px;flex:0 0 54px;padding:6px 0;font-size:10px;white-space:nowrap;border-color:#f0c7d0;color:#b94b64;position:relative;z-index:5;pointer-events:auto">RESET</button></div></div>
 <div class="glass"><div class="metric-top"><span class="metric-icon">✧</span><span class="tiny">ESTIMATE</span></div><div class="metric-label">Calories burned</div><div class="metric-value" id="burned">0 <span class="metric-unit">kcal</span></div><div class="progress"><i id="burnbar" style="width:0%"></i></div><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;height:32px;min-height:32px"><div class="tiny" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">Activity-based estimate</div><button class="pill" id="resetBurned" type="button" style="width:54px;min-width:54px;flex:0 0 54px;padding:6px 0;font-size:10px;white-space:nowrap;border-color:#f0c7d0;color:#b94b64;position:relative;z-index:5;pointer-events:auto">RESET</button></div></div>
 </div>
-<div class="glass fast-card"><div style="min-width:0"><div class="eyebrow">FASTING TIMER</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Choose your target duration</div><div class="progress" style="margin-top:12px;height:9px"><i id="fastProgress" style="width:0%"></i></div><div class="tiny" id="fastRemaining" style="margin-top:7px">Time remaining · --:--:--</div><label class="tiny" for="fastHours">TARGET HOURS</label><input id="fastHours" class="number-input" type="number" min="1" max="24" step="1" value="16" style="width:78px;padding:7px;margin-top:5px"><div style="margin-top:9px"><label class="tiny" for="fastStartTime">FASTING START TIME</label><input id="fastStartTime" class="number-input" type="time" style="width:116px;padding:7px;margin-top:5px"></div><div style="margin-top:8px"><button class="pill secondary" id="fastNotify" type="button" style="padding:6px 10px;font-size:10px">♧ ENABLE NOTIFICATIONS</button></div></div><button class="pill" id="fastToggle">START FAST</button></div>
+<div class="glass fast-card"><div style="min-width:0"><div class="eyebrow">FASTING TIMER</div><div class="fast-time" id="fastClock">00:00:00</div><div class="tiny" id="fastStatus">Choose your target duration</div><div class="progress" style="margin-top:12px;height:9px"><i id="fastProgress" style="width:0%"></i></div><div class="tiny" id="fastRemaining" style="margin-top:7px">Time remaining · --:--:--</div><label class="tiny" for="fastHours">TARGET HOURS</label><input id="fastHours" class="number-input" type="number" min="1" max="24" step="1" value="16" style="width:78px;padding:7px;margin-top:5px"><div style="margin-top:9px"><label class="tiny" for="fastStartTime">FASTING START TIME</label><input id="fastStartTime" type="hidden"><button id="fastStartTimeButton" class="fast-time-trigger" type="button" aria-haspopup="dialog" aria-controls="fastTimePicker">--:-- <span aria-hidden="true">⌄</span></button></div><div style="margin-top:8px"><button class="pill secondary" id="fastNotify" type="button" style="padding:6px 10px;font-size:10px">♧ ENABLE NOTIFICATIONS</button></div></div><button class="pill" id="fastToggle">START FAST</button></div>
+<div class="fast-time-overlay" id="fastTimePicker" aria-hidden="true">
+ <div class="fast-time-backdrop" data-fast-time-close></div>
+ <section class="fast-time-dialog" role="dialog" aria-modal="true" aria-labelledby="fastTimeTitle">
+  <div class="fast-time-dialog-head"><div><div class="eyebrow">FASTING TIMER</div><h3 id="fastTimeTitle">Choose start time</h3></div><button class="fast-time-close" type="button" data-fast-time-close aria-label="Close">×</button></div>
+  <div class="fast-time-wheels">
+   <div class="fast-time-wheel-group"><span>HOUR</span><div class="fast-time-wheel" id="fastHourWheel" aria-label="Hour" tabindex="0"></div></div>
+   <div class="fast-time-wheel-separator">:</div>
+   <div class="fast-time-wheel-group"><span>MINUTE</span><div class="fast-time-wheel" id="fastMinuteWheel" aria-label="Minute" tabindex="0"></div></div>
+  </div>
+  <div class="fast-time-preview" id="fastTimePreview">--:--</div>
+  <div class="fast-time-actions"><button class="pill secondary" type="button" data-fast-time-close>Cancel</button><button class="pill" id="fastTimeConfirm" type="button">Set time</button></div>
+ </section>
+</div>
 <div class="section-head"><h3>Hydration</h3><span class="tiny" id="waterText">0 / 8 glasses</span></div>
 <div class="glass"><div style="display:flex;align-items:center;justify-content:space-between"><div><div class="metric-value" id="waterCount">0 <span class="metric-unit">glasses</span></div><div class="tiny">A little more, a little better</div></div><div style="display:flex;align-items:center;gap:8px"><button class="pill" id="addWater">＋ ADD WATER</button><button class="water-reset" id="resetWater" type="button" aria-label="Reset hydration" title="Reset hydration">↻</button></div></div><div class="progress"><i id="waterbar" style="width:0%"></i></div></div>
 <div class="section-head"><h3>Calories consumed</h3><span class="tiny">FOOD LOG</span></div>
@@ -688,7 +721,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    const elapsed=Math.max(0,Date.now()-state.start),left=Math.max(0,goal-elapsed),pct=Math.min(100,elapsed/goal*100);
    clock.textContent=fmt(elapsed/1000);
    bar.style.width=pct+'%';
-   toggle.textContent='END FAST';hours.disabled=true;if(startTimeInput)startTimeInput.disabled=true;
+   toggle.textContent='END FAST';hours.disabled=true;if(startTimeInput)startTimeInput.disabled=true;if(startTimeButton)startTimeButton.disabled=true;
    if(left<=0){
     remaining.textContent='Fasting time finished';
     status.textContent='FASTING COMPLETE';
@@ -708,15 +741,65 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
    state.fasting=false;state.start=0;state.completed=false;
    clock.textContent='00:00:00';status.textContent='Ready · '+state.target+'-hour target';
    bar.style.width='0%';remaining.textContent='Time remaining · '+fmt(goal/1000);
-   toggle.textContent='START FAST';hours.disabled=false;if(startTimeInput)startTimeInput.disabled=false;
+   toggle.textContent='START FAST';hours.disabled=false;if(startTimeInput)startTimeInput.disabled=false;if(startTimeButton)startTimeButton.disabled=false;
   }
  }
- const startTime=$('fastStartTime');
+ const startTime=$('fastStartTime'),startTimeButton=$('fastStartTimeButton'),timePicker=$('fastTimePicker');
  const timeInputValue=timestamp=>{const d=new Date(timestamp);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
  const currentLocalTime=()=>timeInputValue(Date.now());
- if(startTime){
+ const hourWheel=$('fastHourWheel'),minuteWheel=$('fastMinuteWheel'),timePreview=$('fastTimePreview');
+ let draftHour=0,draftMinute=0,wheelScrollTimer=0,lastWheelValue={hour:-1,minute:-1};
+ const gentleHaptic=()=>{try{if(navigator.vibrate)navigator.vibrate(8)}catch(e){}};
+ const wheelMarkup=count=>'<div class="fast-time-wheel-spacer" aria-hidden="true"></div>'+Array.from({length:count},(_,i)=>'<div class="fast-time-wheel-item" data-value="'+i+'">'+String(i).padStart(2,'0')+'</div>').join('')+'<div class="fast-time-wheel-spacer" aria-hidden="true"></div>';
+ if(hourWheel&&minuteWheel&&timePicker&&startTimeButton&&startTime){
+  hourWheel.innerHTML=wheelMarkup(24);minuteWheel.innerHTML=wheelMarkup(60);
+  const paintWheel=(wheel,value)=>{wheel.querySelectorAll('.fast-time-wheel-item').forEach((el,i)=>el.classList.toggle('selected',i===value))};
+  const previewTime=()=>{timePreview.textContent=String(draftHour).padStart(2,'0')+':'+String(draftMinute).padStart(2,'0')};
+  const setWheel=(wheel,value,kind,instant=false)=>{
+   const max=kind==='hour'?23:59;value=Math.max(0,Math.min(max,value));
+   if(kind==='hour')draftHour=value;else draftMinute=value;
+   wheel.scrollTo({top:value*44,behavior:instant?'auto':'smooth'});
+   paintWheel(wheel,value);previewTime();lastWheelValue[kind]=value;
+  };
+  const readWheel=(wheel,kind)=>{
+   const value=Math.max(0,Math.min(kind==='hour'?23:59,Math.round(wheel.scrollTop/44)));
+   if(value!==lastWheelValue[kind]){lastWheelValue[kind]=value;gentleHaptic()}
+   if(kind==='hour')draftHour=value;else draftMinute=value;
+   paintWheel(wheel,value);previewTime();
+  };
+  const openPicker=()=>{
+   if(state.fasting)return;
+   const initial=(startTime.value&&/^([01]\\d|2[0-3]):[0-5]\\d$/.test(startTime.value))?startTime.value:(state.startTime||currentLocalTime());
+   const parts=initial.split(':').map(Number);draftHour=parts[0]||0;draftMinute=parts[1]||0;
+   setWheel(hourWheel,draftHour,'hour',true);setWheel(minuteWheel,draftMinute,'minute',true);
+   timePicker.classList.add('open');timePicker.setAttribute('aria-hidden','false');
+  };
+  const closePicker=()=>{timePicker.classList.remove('open');timePicker.setAttribute('aria-hidden','true')};
   startTime.value=state.fasting&&state.start>0?timeInputValue(state.start):(state.startTime||currentLocalTime());
-  startTime.addEventListener('change',()=>{if(!state.fasting){state.startTime=startTime.value;save()}});
+  startTimeButton.textContent=startTime.value+'  ⌄';
+  startTimeButton.addEventListener('click',openPicker);
+  [hourWheel,minuteWheel].forEach((wheel,index)=>{
+   const kind=index===0?'hour':'minute';
+   wheel.addEventListener('scroll',()=>{
+    if(wheelScrollTimer)clearTimeout(wheelScrollTimer);
+    const value=Math.max(0,Math.min(kind==='hour'?23:59,Math.round(wheel.scrollTop/44)));
+    if(value!==lastWheelValue[kind]){lastWheelValue[kind]=value;gentleHaptic()}
+    if(kind==='hour')draftHour=value;else draftMinute=value;
+    paintWheel(wheel,value);previewTime();
+    wheelScrollTimer=setTimeout(()=>readWheel(wheel,kind),75);
+   },{passive:true});
+   wheel.addEventListener('keydown',e=>{
+    if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();setWheel(wheel,(kind==='hour'?draftHour:draftMinute)+(e.key==='ArrowUp'?-1:1),kind)}
+   });
+  });
+  timePicker.querySelectorAll('[data-fast-time-close]').forEach(el=>el.addEventListener('click',closePicker));
+  $('fastTimeConfirm').addEventListener('click',()=>{
+   const value=String(draftHour).padStart(2,'0')+':'+String(draftMinute).padStart(2,'0');
+   startTime.value=value;state.startTime=value;startTimeButton.textContent=value+'  ⌄';save();closePicker();gentleHaptic();
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&timePicker.classList.contains('open'))closePicker()});
+  const syncTimeControl=()=>{startTimeButton.disabled=!!state.fasting};
+  syncTimeControl();
  }
  const hours=$('fastHours');
  if(hours){

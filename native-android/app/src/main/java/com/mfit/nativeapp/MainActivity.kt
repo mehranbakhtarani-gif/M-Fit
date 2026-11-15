@@ -127,6 +127,7 @@ private fun MfitApp() {
     var selectedSessionId by remember { mutableStateOf<String?>(null) }
     var selectedPoints by remember { mutableStateOf<List<ActivityTrackPointEntity>>(emptyList()) }
     var savedWeightKg by remember { mutableStateOf(UserProfilePreferences.getWeightKg(context)) }
+    var profileName by remember { mutableStateOf(UserProfilePreferences.getProfileName(context)) }
     var weightHistory by remember { mutableStateOf(BodyMeasurementPreferences.history(context)) }
     var weightInput by remember { mutableStateOf(savedWeightKg?.let { formatWeight(it) } ?: "") }
     val backupExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -174,7 +175,7 @@ private fun MfitApp() {
     }
 
     LaunchedEffect(selectedTab, historyRefresh) {
-        if (selectedTab == MfitTab.Sport) {
+        if (selectedTab == MfitTab.Sport || selectedTab == MfitTab.Profile) {
             sessions = withContext(Dispatchers.IO) {
                 ActivityDatabase.get(context).activityDao().getSessions()
             }
@@ -301,6 +302,11 @@ private fun MfitApp() {
             when (selectedTab) {
                 MfitTab.Health -> HealthDashboardScreen()
                 MfitTab.Profile -> ProfileScreen(
+                    profileName = profileName,
+                    activitySessions = sessions,
+                    onSaveProfileName = { name ->
+                        if (UserProfilePreferences.saveProfileName(context, name)) { profileName = name.trim().take(28); true } else false
+                    },
                     onSaveMeasurements = { weight, height, waist ->
                         runCatching {
                             weightHistory = BodyMeasurementPreferences.addMeasurement(context, weight, height, waist)
@@ -698,6 +704,9 @@ private fun HealthDashboardScreen() {
 
 @Composable
 private fun ProfileScreen(
+    profileName: String,
+    activitySessions: List<ActivitySessionEntity>,
+    onSaveProfileName: (String) -> Boolean,
     onSaveMeasurements: (Double?, Double?, Double?) -> Boolean,
     weightInput: String,
     savedWeightKg: Double?,
@@ -710,6 +719,7 @@ private fun ProfileScreen(
     val profileContext = LocalContext.current
     var heightInput by remember { mutableStateOf(BodyMeasurementPreferences.latestHeightCm(profileContext)?.let { formatWeight(it) } ?: "") }
     var waistInput by remember { mutableStateOf(BodyMeasurementPreferences.latestWaistCm(profileContext)?.let { formatWeight(it) } ?: "") }
+    var nameInput by remember(profileName) { mutableStateOf(profileName) }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -740,10 +750,24 @@ private fun ProfileScreen(
                     }
                 }
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("پروفایل من", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = MfitPalette.ink)
+                    Text(if (profileName.isBlank()) "پروفایل من" else profileName, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = MfitPalette.ink)
                     Text("اطلاعات بدن و پیشرفت سلامتی", fontSize = 11.sp, color = MfitPalette.muted)
                     Text(savedWeightKg?.let { "وزن فعلی: ${formatWeight(it)} کیلوگرم" } ?: "هنوز وزنی ثبت نکرده‌ای", fontSize = 10.sp, color = MfitPalette.green)
                 }
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(23.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("نام پروفایل", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
+                TextField(value = nameInput, onValueChange = { nameInput = it.take(28) }, modifier = Modifier.fillMaxWidth(), label = { Text("نام نمایشی") }, singleLine = true, shape = RoundedCornerShape(15.dp))
+                Button(onClick = {
+                    if (onSaveProfileName(nameInput)) Toast.makeText(profileContext, "نام پروفایل ذخیره شد.", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(profileContext, "یک نام معتبر وارد کن.", Toast.LENGTH_SHORT).show()
+                }, enabled = nameInput.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("ذخیره نام") }
             }
         }
         Card(
@@ -797,6 +821,29 @@ private fun ProfileScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MfitPalette.muted
                 )
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(23.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("خلاصه فعالیت‌ها", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
+                val totalDistance = activitySessions.sumOf { it.distanceMeters }
+                val totalCalories = activitySessions.sumOf { it.calories }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("تعداد فعالیت‌ها", color = MfitPalette.muted)
+                    Text(activitySessions.size.toString(), color = MfitPalette.ink, fontWeight = FontWeight.Bold)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("مسافت کل", color = MfitPalette.muted)
+                    Text(String.format(Locale.US, "%.1f km", totalDistance / 1000.0), color = MfitPalette.ink, fontWeight = FontWeight.Bold)
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("کالری ثبت‌شده", color = MfitPalette.muted)
+                    Text("$totalCalories kcal", color = MfitPalette.ink, fontWeight = FontWeight.Bold)
+                }
             }
         }
         if (weightHistory.isNotEmpty()) {

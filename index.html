@@ -1050,8 +1050,8 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  const timeWrap=$('fastTimeWrap'),timeTrigger=$('fastTimeTrigger'),timeLabel=$('fastTimeLabel'),timeMenu=$('fastTimeMenu'),timeHours=$('fastTimeHours'),timeMinutes=$('fastTimeMinutes');
  const closeTimeMenu=()=>{if(timeMenu&&timeWrap&&timeTrigger){timeMenu.hidden=true;timeWrap.classList.remove('is-open');timeTrigger.setAttribute('aria-expanded','false')}};
  const moveTimeMenu=()=>{if(!timeMenu||!timeTrigger)return;const r=timeTrigger.getBoundingClientRect(),w=r.width,left=Math.max(8,Math.min(r.left,window.innerWidth-w-8));timeMenu.style.left=left+'px';timeMenu.style.top=(r.bottom+5)+'px';timeMenu.style.width=w+'px'};
- const timePickerTick=()=>{try{if(navigator.vibrate)navigator.vibrate(10)}catch(e){}};
- const timePickerSelectHaptic=()=>{try{if(navigator.vibrate)navigator.vibrate(24)}catch(e){}};
+ const timePickerTick=()=>{try{if(window.MfitNativeHaptics?.isNative){window.MfitNativeHaptics.tick();return}if(navigator.vibrate)navigator.vibrate(10)}catch(e){}};
+ const timePickerSelectHaptic=()=>{try{if(window.MfitNativeHaptics?.isNative){window.MfitNativeHaptics.select();return}if(navigator.vibrate)navigator.vibrate(24)}catch(e){}};
  if(timeMenu&&timeMenu.parentElement!==document.body)document.body.appendChild(timeMenu);
  const timeInputValue=timestamp=>{const d=new Date(timestamp);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
  const currentLocalTime=()=>timeInputValue(Date.now());

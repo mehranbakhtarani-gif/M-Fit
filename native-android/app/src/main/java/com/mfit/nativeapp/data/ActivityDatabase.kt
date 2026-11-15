@@ -43,6 +43,9 @@ interface ActivityDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertSession(session: ActivitySessionEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun restoreSessionIfMissing(session: ActivitySessionEntity)
+
     @Query("UPDATE activity_sessions SET status = :status, endedAtMillis = :endedAt, elapsedMillis = :elapsed, distanceMeters = :distance, calories = :calories WHERE id = :id")
     suspend fun updateSession(
         id: String,

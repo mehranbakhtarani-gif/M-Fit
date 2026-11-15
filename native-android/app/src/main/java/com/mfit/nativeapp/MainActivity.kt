@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Slider
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -41,6 +44,16 @@ import com.mfit.nativeapp.data.ActivityDatabase
 import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
 import com.mfit.nativeapp.location.ActivityLocationService
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.BoundingBox
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -245,13 +258,7 @@ private fun MfitApp() {
                                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text("جزئیات مسیر", style = MaterialTheme.typography.titleMedium)
                                     Text("نقاط GPS ذخیره‌شده: ${selectedPoints.size}")
-                                    selectedPoints.firstOrNull()?.let { first ->
-                                        Text("شروع مسیر: %.5f, %.5f".format(Locale.US, first.latitude, first.longitude))
-                                    }
-                                    selectedPoints.lastOrNull()?.let { last ->
-                                        Text("آخرین نقطه: %.5f, %.5f".format(Locale.US, last.latitude, last.longitude))
-                                    }
-                                    Text("نقشه و بازپخش تصویری مسیر در مرحله بعد اضافه می‌شود.", style = MaterialTheme.typography.bodySmall)
+                                    ActivityRouteMap(points = selectedPoints)
                                     Button(onClick = { selectedSessionId = null }) { Text("بستن جزئیات") }
                                 }
                             }
@@ -295,6 +302,116 @@ private fun ActivityHistoryCard(session: ActivitySessionEntity, onClick: () -> U
                 style = MaterialTheme.typography.bodyMedium
             )
             Text("برای مشاهده جزئیات مسیر لمس کنید", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun ActivityRouteMap(points: List<ActivityTrackPointEntity>) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var mapView by remember { mutableStateOf<MapView?>(null) }
+    var progress by remember(points.size, points.firstOrNull()?.timestampMillis) {
+        mutableFloatStateOf(1f)
+    }
+    var hasCentered by remember(points.size, points.firstOrNull()?.timestampMillis) {
+        mutableStateOf(false)
+    }
+    val visibleCount = if (points.isEmpty()) 0 else
+        (1 + ((points.size - 1) * progress).toInt()).coerceIn(1, points.size)
+    val visiblePoints = points.take(visibleCount)
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> mapView?.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView?.onPause()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView?.onPause()
+            mapView?.onDetach()
+            mapView = null
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (points.isEmpty()) {
+            Text("برای این فعالیت نقطه GPS ذخیره نشده است.")
+        } else {
+            AndroidView(
+                modifier = Modifier.fillMaxWidth().height(260.dp),
+                factory = { ctx ->
+                    Configuration.getInstance().userAgentValue = ctx.packageName
+                    MapView(ctx).apply {
+                        setTileSource(TileSourceFactory.MAPNIK)
+                        setMultiTouchControls(true)
+                        setBuiltInZoomControls(true)
+                        controller.setZoom(15.0)
+                        mapView = this
+                        onResume()
+                    }
+                },
+                update = { map ->
+                    map.overlays.clear()
+                    val route = visiblePoints.map { GeoPoint(it.latitude, it.longitude) }
+                    if (route.size >= 2) {
+                        val line = Polyline(map).apply {
+                            setPoints(route)
+                            outlinePaint.color = android.graphics.Color.rgb(35, 116, 220)
+                            outlinePaint.strokeWidth = 9f
+                            outlinePaint.strokeCap = android.graphics.Paint.Cap.ROUND
+                            outlinePaint.strokeJoin = android.graphics.Paint.Join.ROUND
+                        }
+                        map.overlays.add(line)
+                    }
+                    if (route.isNotEmpty()) {
+                        val start = Marker(map).apply {
+                            position = route.first()
+                            title = "شروع مسیر"
+                            setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                        }
+                        map.overlays.add(start)
+                        if (route.size > 1) {
+                            val current = Marker(map).apply {
+                                position = route.last()
+                                title = if (visibleCount == points.size) "پایان مسیر" else "موقعیت در بازپخش"
+                                setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                            }
+                            map.overlays.add(current)
+                        }
+                        if (!hasCentered) {
+                            if (route.size == 1) {
+                                map.controller.setZoom(16.0)
+                                map.controller.setCenter(route.first())
+                            } else {
+                                val north = route.maxOf { it.latitude }
+                                val south = route.minOf { it.latitude }
+                                val east = route.maxOf { it.longitude }
+                                val west = route.minOf { it.longitude }
+                                map.zoomToBoundingBox(BoundingBox(north, east, south, west), true, 64)
+                            }
+                            hasCentered = true
+                        }
+                    }
+                    map.invalidate()
+                }
+            )
+            Text("بازپخش مسیر")
+            Slider(
+                value = progress,
+                onValueChange = { progress = it },
+                valueRange = 0f..1f,
+                enabled = points.size > 1
+            )
+            Text(
+                "$visibleCount از ${points.size} نقطه نمایش داده می‌شود",
+                style = MaterialTheme.typography.labelSmall
+            )
+            Text("نقشه © OpenStreetMap contributors", style = MaterialTheme.typography.labelSmall)
         }
     }
 }

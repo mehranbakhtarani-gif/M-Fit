@@ -354,6 +354,7 @@ private fun HealthDashboardScreen() {
             delay(1000L)
         }
     }
+    var showWeeklyReport by remember { mutableStateOf(false) }
     var foodName by remember { mutableStateOf("") }
     var foodCalories by remember { mutableStateOf("") }
     var hasNotificationPermission by remember {
@@ -389,6 +390,11 @@ private fun HealthDashboardScreen() {
         }
     }
 
+    if (showWeeklyReport) {
+        WeeklyHealthReportScreen(onBack = { showWeeklyReport = false })
+        return
+    }
+
     val eatenCalories = foods.sumOf { it.calories }
     val stepProgress = (steps / 7000f).coerceIn(0f, 1f)
     Column(
@@ -397,6 +403,7 @@ private fun HealthDashboardScreen() {
     ) {
         Text("سلامت روزانه", style = MaterialTheme.typography.headlineMedium)
         Text("پیشرفت امروزت را ثبت و دنبال کن.", style = MaterialTheme.typography.bodyMedium)
+        Button(onClick = { showWeeklyReport = true }, modifier = Modifier.fillMaxWidth()) { Text("گزارش هفتگی سلامت") }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge)

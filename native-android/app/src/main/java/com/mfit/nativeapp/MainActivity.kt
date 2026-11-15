@@ -448,6 +448,8 @@ private fun HealthDashboardScreen() {
     var water by remember { mutableIntStateOf(DailyHealthPreferences.water(context)) }
     var foods by remember { mutableStateOf(DailyHealthPreferences.foods(context)) }
     var fastingSession by remember { mutableStateOf(FastingPreferences.active(context)) }
+    var fastingHours by remember { mutableStateOf("16") }
+    var fastingMinutes by remember { mutableStateOf("00") }
     var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(fastingSession?.startedAtMillis, fastingSession?.targetEndAtMillis) {
         while (fastingSession != null) {
@@ -602,19 +604,36 @@ private fun HealthDashboardScreen() {
                 Text("تایمر روزه‌داری", style = MaterialTheme.typography.titleLarge, color = MfitPalette.ink)
                 if (fastingSession == null) {
                     Text("مدت روزه‌ات را انتخاب کن تا زمان‌سنج شروع شود.", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("ساعت", style = MaterialTheme.typography.labelSmall, color = MfitPalette.muted)
+                            TextField(value = fastingHours, onValueChange = { fastingHours = it.filter(Char::isDigit).take(2) }, singleLine = true, label = { Text("۰ تا ۴۸") }, shape = RoundedCornerShape(14.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text("دقیقه", style = MaterialTheme.typography.labelSmall, color = MfitPalette.muted)
+                            TextField(value = fastingMinutes, onValueChange = { fastingMinutes = it.filter(Char::isDigit).take(2) }, singleLine = true, label = { Text("۰ تا ۵۹") }, shape = RoundedCornerShape(14.dp))
+                        }
+                    }
+                    Button(onClick = {
+                        val h = fastingHours.toIntOrNull() ?: -1
+                        val m = fastingMinutes.toIntOrNull() ?: -1
+                        val total = h * 60 + m
+                        if (h in 0..48 && m in 0..59 && total in 1..2880) {
+                            fastingSession = FastingPreferences.startForMinutes(context, total)
+                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
+                        } else {
+                            Toast.makeText(context, "مدت روزه باید بین ۱ دقیقه تا ۴۸ ساعت باشد.", Toast.LENGTH_LONG).show()
+                        }
+                    }, modifier = Modifier.fillMaxWidth()) { Text("شروع مدت انتخاب‌شده") }
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Button(onClick = {
-                            fastingSession = FastingPreferences.start(context, 14)
-                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
-                        }) { Text("۱۴ ساعت") }
-                        Button(onClick = {
-                            fastingSession = FastingPreferences.start(context, 16)
-                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
-                        }) { Text("۱۶ ساعت") }
-                        Button(onClick = {
-                            fastingSession = FastingPreferences.start(context, 18)
-                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
-                        }) { Text("۱۸ ساعت") }
+                        listOf(14, 16, 18).forEach { hours ->
+                            Button(onClick = {
+                                fastingHours = hours.toString()
+                                fastingMinutes = "00"
+                                fastingSession = FastingPreferences.start(context, hours)
+                                fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
+                            }, modifier = Modifier.weight(1f)) { Text("$hours ساعت") }
+                        }
                     }
                     if (!hasNotificationPermission && android.os.Build.VERSION.SDK_INT >= 33) {
                         Button(onClick = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) {

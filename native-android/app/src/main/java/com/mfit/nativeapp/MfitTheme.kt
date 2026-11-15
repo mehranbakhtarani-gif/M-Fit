@@ -46,9 +46,9 @@ private val MfitLightColors = lightColorScheme(
     onSecondaryContainer = Color(0xFF28594E),
     background = Color(0xFFF2FAF7),
     onBackground = Color(0xFF183B3B),
-    surface = Color(0xF2FFFFFF),
+    surface = Color(0xBFFFFFFF),
     onSurface = Color(0xFF183B3B),
-    surfaceVariant = Color(0xFFE8F5F0),
+    surfaceVariant = Color(0xDDE8F5F0),
     onSurfaceVariant = Color(0xFF77918D),
     outline = Color(0xFFDCEEE8)
 )

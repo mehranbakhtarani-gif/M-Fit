@@ -65,6 +65,9 @@ interface ActivityDao {
     @Query("SELECT * FROM activity_track_points WHERE sessionId = :sessionId ORDER BY timestampMillis")
     suspend fun getPoints(sessionId: String): List<ActivityTrackPointEntity>
 
+    @Query("SELECT * FROM activity_sessions WHERE startedAtMillis >= :startMillis AND startedAtMillis < :endMillis ORDER BY startedAtMillis DESC")
+    suspend fun getSessionsBetween(startMillis: Long, endMillis: Long): List<ActivitySessionEntity>
+
     @Query("SELECT * FROM activity_sessions ORDER BY startedAtMillis DESC")
     suspend fun getSessions(): List<ActivitySessionEntity>
 }

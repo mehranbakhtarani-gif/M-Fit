@@ -53,7 +53,8 @@ Current strategy: incremental migration, not a rewrite-in-place. Preserve the cu
 - [x] Record baseline architecture and feature inventory.
 - [ ] Complete code-level audit of tracking, calculations, persistence, food AI, fasting, and profile flows.
 - [ ] Specify data schema and legacy data export/import contract.
-- [ ] Add native Android Gradle project (Kotlin, Compose, Room, Navigation, test setup) without touching current web app.
+- [x] Add isolated native Android Gradle/Compose app shell and a dedicated CI build workflow (initial scaffold only; build result not yet verified).
+- [ ] Add Room, Navigation, repository, and test foundations after the legacy data contract is specified.
 - [ ] Implement domain models and unit tests first.
 - [ ] Implement GPS tracking state machine + foreground service + Room persistence.
 - [ ] Implement remaining feature modules in parity order.

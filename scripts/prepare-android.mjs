@@ -23,6 +23,12 @@ await import('node:fs/promises').then(({writeFile}) => writeFile(colors + '/ic_l
   '<?xml version="1.0" encoding="utf-8"?>\n<resources><color name="ic_launcher_background">#0B1D2B</color></resources>'));
 console.log('Generated Mfit launcher icon resources.');
 
+/* Register the native Android step detector plugin in the generated Capacitor project. */
+const javaDir = 'android/app/src/main/java/com/mfit/wellness';
+await mkdir(javaDir, { recursive: true });
+const pluginDir = javaDir + '/plugins';
+await mkdir(pluginDir, { recursive: true });
+const { readFile, writeFile } = await import('node:fs/promises');
 /* Native Android haptics for reliable wheel ticks inside WebView. */
 const hapticsPlugin = String.raw`package com.mfit.wellness.plugins;
 import android.content.Context;
@@ -62,12 +68,6 @@ public class MfitHapticsPlugin extends Plugin {
 }`;
 await writeFile(pluginDir + '/MfitHapticsPlugin.java', hapticsPlugin);
 
-/* Register the native Android step detector plugin in the generated Capacitor project. */
-const javaDir = 'android/app/src/main/java/com/mfit/wellness';
-await mkdir(javaDir, { recursive: true });
-const pluginDir = javaDir + '/plugins';
-await mkdir(pluginDir, { recursive: true });
-const { readFile, writeFile } = await import('node:fs/promises');
 /* Native Android MediaStore save + ACTION_SEND share integration for route PNGs. */
 const sharePlugin = String.raw`package com.mfit.wellness.plugins;
 import android.content.ContentValues;

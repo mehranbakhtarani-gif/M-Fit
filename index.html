@@ -808,8 +808,7 @@ $('history').addEventListener('click',async event=>{const button=event.target.cl
  function routeImageBlob(route,stats){
   return new Promise((resolve,reject)=>{
    if(!liveMap){reject(new Error('Live map is not initialized'));return}
-   const mapEl=liveMap.getContainer(),tiles=[...mapEl.querySelectorAll('.leaflet-tile')].filter(img=>img.complete&&img.naturalWidth>0);
-   if(!tiles.length){reject(new Error('Map tiles are not loaded yet. Open the map online and wait for tiles to load.'));return}
+   const mapEl=liveMap.getContainer(),tiles=[...mapEl.querySelectorAll('.leaflet-tile')].filter(img=>img.complete&&img.naturalWidth>0),mapCanvas=mapEl.querySelector('.maplibregl-canvas');
    const canvas=document.createElement('canvas');canvas.width=2400;canvas.height=3000;const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Canvas unavailable'));return}ctx.scale(2,2);
    const bg=ctx.createLinearGradient(0,0,1200,1500);bg.addColorStop(0,'#e9fff5');bg.addColorStop(1,'#e8f3ff');ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);
    ctx.fillStyle='rgba(255,255,255,.88)';ctx.beginPath();ctx.roundRect(55,55,1090,1390,54);ctx.fill();
@@ -824,7 +823,12 @@ $('history').addEventListener('click',async event=>{const button=event.target.cl
    ctx.fillStyle='#607c78';ctx.font='600 24px system-ui';ctx.fillText(weather?weather.label:'Weather unavailable',wx.x+390,wx.y+111);
    ctx.fillStyle='#82978f';ctx.font='500 18px system-ui';ctx.fillText(weather?(weather.wind!==null?'Wind '+weather.wind+' km/h':'')+(weather.humidity!==null?'   ·   Humidity '+weather.humidity+'%':''):'Historical weather data unavailable',wx.x+195,wx.y+151);
    const box={x:105,y:455,w:990,h:600},rect=mapEl.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle='#edf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);
-   try{for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}}catch(e){ctx.restore();reject(new Error('Map provider prevents exporting its tiles to an image.'));return}
+   let basemapDrawn=false;
+   try{
+    if(mapCanvas&&mapCanvas.width>0&&mapCanvas.height>0){ctx.drawImage(mapCanvas,box.x,box.y,box.w,box.h);basemapDrawn=true}
+    else if(tiles.length){for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}basemapDrawn=true}
+   }catch(e){console.warn('M FIT basemap snapshot unavailable; exporting route on clean background:',e)}
+   if(!basemapDrawn){ctx.fillStyle='#eaf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);ctx.strokeStyle='rgba(70,120,105,.12)';ctx.lineWidth=1;for(let x=box.x+40;x<box.x+box.w;x+=80){ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}for(let y=box.y+40;y<box.y+box.h;y+=80){ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}}
    if(route.length){const pts=route.map(p=>{const q=liveMap.latLngToContainerPoint([Number(p.lat),Number(p.lon)]);return{x:box.x+q.x/rect.width*box.w,y:box.y+q.y/rect.height*box.h}});ctx.shadowColor='#168e6b88';ctx.shadowBlur=22;ctx.strokeStyle='#fff';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;ctx.strokeStyle='#20a879';ctx.lineWidth=15;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();for(const [p,color] of [[pts[0],'#168e6b'],[pts[pts.length-1],'#f08a55']]){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.fill()}}
    ctx.restore();
    ctx.fillStyle='#183e35';ctx.font='800 42px system-ui';ctx.fillText(stats.mode,105,1125);
@@ -864,10 +868,11 @@ $('exportRoute').onclick=async()=>{
  const button=$('exportRoute');if(button.disabled)return;button.disabled=true;const oldLabel=button.textContent;button.textContent='PREPARING ROUTE…';
  try{
   const map=await waitForActivityMap();
-  const saved=(data.history||[])[0],usingLive=coords.length>1;
-  let route=usingLive?coords:(saved?.coords||[]),demoRoute=false;
-  if(route.length<2){demoRoute=true;const center=map.getCenter(),lat=Number(center.lat),lon=Number(center.lng),d=0.0018;route=[{lat:lat-d,lon:lon-d},{lat:lat+d,lon:lon-d*.2},{lat:lat+d*.55,lon:lon+d},{lat:lat-d*.55,lon:lon+d*.85},{lat:lat-d,lon:lon-d}];toast('نمونه آزمایشی مسیر آماده شد؛ این مسیر GPS واقعی نیست.')}
-  const modeName=usingLive?mode:(saved?.mode||'Activity'),km=demoRoute?0.42:(usingLive?distance:Number(saved?.distance||0)),seconds=demoRoute?240:(usingLive?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0)),kcal=estimateActivityCalories(modeName,km,seconds),activityEnd=usingLive?Date.now():(Number(saved?.timestamp)||Date.now());
+  if(activityStoreInitPromise)await activityStoreInitPromise;
+  const usingLive=coords.length>1,saved=usingLive?null:(data.history||[]).filter(x=>Array.isArray(x.coords)&&x.coords.length>1).sort((a,b)=>(Number(b.timestamp)||0)-(Number(a.timestamp)||0))[0];
+  const route=usingLive?coords:(saved?.coords||[]);
+  if(route.length<2)throw new Error('برای ساخت مسیر قابل اشتراک، ابتدا یک فعالیت GPS را با حداقل دو نقطه ثبت و FINISH کن.');
+  const modeName=usingLive?mode:(saved?.mode||'Activity'),km=usingLive?distance:Number(saved?.distance||0),seconds=usingLive?(elapsed+(active?(Date.now()-startedAt)/1000:0)):(saved?.duration||0),kcal=estimateActivityCalories(modeName,km,seconds),activityEnd=usingLive?Date.now():(Number(saved?.timestamp)||Date.now());
   map.invalidateSize();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   const oldCenter=map.getCenter(),oldZoom=map.getZoom();
   try{
@@ -877,7 +882,7 @@ $('exportRoute').onclick=async()=>{
    if(activeTiles){activeTiles.redraw();await new Promise(resolve=>{let done=false;const finish=()=>{if(done)return;done=true;resolve()};activeTiles.once('load',finish);setTimeout(finish,2500)})}
    const weather=await Promise.race([getRouteWeather(route,activityEnd,seconds),new Promise(resolve=>setTimeout(()=>resolve(null),4500))]).catch(()=>null);
    const activityDate=new Date(activityEnd-Math.max(0,seconds)*500).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-   const blob=await routeImageBlob(route,{mode:demoRoute?'DEMO ROUTE':modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather,activityDate});
+   const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds).slice(0,5),kcal,weather,activityDate});
    showRoutePreview(new File([blob],'mfit-route.png',{type:'image/png'}));
   }finally{map.setView(oldCenter,oldZoom,{animate:false})}
  }catch(error){console.error('M FIT route share failed:',error);toast(error.message==='Map library did not load'?'نقشه بارگذاری نشد؛ اتصال اینترنت را بررسی کن':'ساخت تصویر مسیر انجام نشد؛ نقشه را باز کن و دوباره امتحان کن')}

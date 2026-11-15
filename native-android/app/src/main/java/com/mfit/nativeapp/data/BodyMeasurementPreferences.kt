@@ -7,7 +7,7 @@ import java.util.UUID
 
 data class BodyMeasurement(
     val id: String,
-    val weightKg: Double,
+    val weightKg: Double?,
     val recordedAtMillis: Long,
     val heightCm: Double? = null,
     val waistCm: Double? = null
@@ -28,7 +28,7 @@ object BodyMeasurementPreferences {
                 val time = item.optLong("recordedAtMillis", 0L)
                 val height = item.optDouble("heightCm", Double.NaN).takeIf { it.isFinite() && it in 80.0..250.0 }
                 val waist = item.optDouble("waistCm", Double.NaN).takeIf { it.isFinite() && it in 30.0..250.0 }
-                if (weight in 20.0..350.0 && time > 0L) {
+                if ((weight.isNaN() || weight in 20.0..350.0) && (weight.isFinite() || height != null || waist != null) && time > 0L) {
                     BodyMeasurement(item.optString("id").ifBlank { UUID.randomUUID().toString() }, weight, time, height, waist)
                 } else null
             }.sortedBy { it.recordedAtMillis }
@@ -62,7 +62,7 @@ object BodyMeasurementPreferences {
         } else {
             current + BodyMeasurement(
                 UUID.randomUUID().toString(),
-                weightKg ?: current.lastOrNull()?.weightKg ?: 75.0,
+                weightKg ?: current.lastOrNull()?.weightKg,
                 nowMillis,
                 heightCm,
                 waistCm
@@ -73,7 +73,7 @@ object BodyMeasurementPreferences {
         next.forEach { item ->
             val json = JSONObject()
                 .put("id", item.id)
-                .put("weightKg", item.weightKg)
+                .put("weightKg", item.weightKg ?: JSONObject.NULL)
                 .put("recordedAtMillis", item.recordedAtMillis)
             item.heightCm?.let { json.put("heightCm", it) }
             item.waistCm?.let { json.put("waistCm", it) }

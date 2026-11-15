@@ -75,8 +75,12 @@ jobs:
         run: npx cap add android
       - name: Generate Mfit launcher resources and native Live Update integration
         run: npm run prepare:android
-      - name: Verify Android SDK levels for Live Updates
+      - name: Set Android SDK levels for Live Updates
         run: |
+          test -f android/variables.gradle
+          sed -i -E 's/(compileSdkVersion[[:space:]]*=[[:space:]]*)[0-9]+/\\136/' android/variables.gradle
+          sed -i -E 's/(targetSdkVersion[[:space:]]*=[[:space:]]*)[0-9]+/\\136/' android/variables.gradle
+          grep -nE 'compileSdkVersion|targetSdkVersion' android/variables.gradle
           grep -q 'compileSdkVersion = 36' android/variables.gradle
           grep -q 'targetSdkVersion = 36' android/variables.gradle
       - name: Sync Capacitor plugins and web assets

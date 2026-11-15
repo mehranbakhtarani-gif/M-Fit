@@ -347,7 +347,7 @@ object NativeBackupManager {
                     mode = draft.optString("mode", "Walk"),
                     timestamp = savedAt,
                     durationSeconds = elapsedSeconds,
-                    distanceKm = draft.optDouble("distance", 0.0) / 1000.0,
+                    distanceKm = draft.optDouble("distance", 0.0),
                     calories = 0,
                     coordinates = draft.optJSONArray("coords"),
                     interrupted = true

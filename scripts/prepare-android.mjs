@@ -23,6 +23,45 @@ await import('node:fs/promises').then(({writeFile}) => writeFile(colors + '/ic_l
   '<?xml version="1.0" encoding="utf-8"?>\n<resources><color name="ic_launcher_background">#0B1D2B</color></resources>'));
 console.log('Generated Mfit launcher icon resources.');
 
+/* Native Android haptics for reliable wheel ticks inside WebView. */
+const hapticsPlugin = String.raw`package com.mfit.wellness.plugins;
+import android.content.Context;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+import android.os.VibratorManager;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+
+@CapacitorPlugin(name = "MfitHaptics")
+public class MfitHapticsPlugin extends Plugin {
+  @PluginMethod public void vibrate(PluginCall call) {
+    try {
+      long duration = call.getLong("duration", 10L);
+      duration = Math.max(1L, Math.min(60L, duration));
+      Vibrator vibrator;
+      if (Build.VERSION.SDK_INT >= 31) {
+        VibratorManager manager = (VibratorManager)getContext().getSystemService(Context.VIBRATOR_MANAGER_SERVICE);
+        vibrator = manager == null ? null : manager.getDefaultVibrator();
+      } else {
+        vibrator = (Vibrator)getContext().getSystemService(Context.VIBRATOR_SERVICE);
+      }
+      if (vibrator == null || !vibrator.hasVibrator()) {
+        JSObject result = new JSObject(); result.put("available", false); call.resolve(result); return;
+      }
+      if (Build.VERSION.SDK_INT >= 26) vibrator.vibrate(VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE));
+      else vibrator.vibrate(duration);
+      JSObject result = new JSObject(); result.put("available", true); call.resolve(result);
+    } catch (Exception error) {
+      call.reject("Android haptic feedback failed: " + error.getMessage(), error);
+    }
+  }
+}`;
+await writeFile(pluginDir + '/MfitHapticsPlugin.java', hapticsPlugin);
+
 /* Register the native Android step detector plugin in the generated Capacitor project. */
 const javaDir = 'android/app/src/main/java/com/mfit/wellness';
 await mkdir(javaDir, { recursive: true });
@@ -276,7 +315,7 @@ public class MfitLiveUpdatePlugin extends Plugin {
 await writeFile(pluginDir + '/MfitLiveUpdatePlugin.java', livePlugin);
 const manifestPath = 'android/app/src/main/AndroidManifest.xml';
 let manifest = await readFile(manifestPath, 'utf8');
-for (const permission of ['android.permission.ACTIVITY_RECOGNITION', 'android.permission.POST_NOTIFICATIONS', 'android.permission.POST_PROMOTED_NOTIFICATIONS']) {
+for (const permission of ['android.permission.VIBRATE', 'android.permission.ACTIVITY_RECOGNITION', 'android.permission.POST_NOTIFICATIONS', 'android.permission.POST_PROMOTED_NOTIFICATIONS']) {
   if (!manifest.includes(permission)) manifest = manifest.replace(/(<manifest\b[^>]*>)/, '$1\n    <uses-permission android:name="' + permission + '" />');
 }
 await writeFile(manifestPath, manifest);
@@ -284,5 +323,9 @@ if (!mainSource.includes('MfitLiveUpdatePlugin')) {
   mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\nimport com.mfit.wellness.plugins.MfitLiveUpdatePlugin;\nimport com.mfit.wellness.plugins.MfitSharePlugin;');
   mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitLiveUpdatePlugin.class);\n        registerPlugin(MfitSharePlugin.class);');
 }
+if (!mainSource.includes('MfitHapticsPlugin')) {
+  mainSource = mainSource.replace('import com.getcapacitor.BridgeActivity;', 'import com.getcapacitor.BridgeActivity;\\nimport com.mfit.wellness.plugins.MfitHapticsPlugin;');
+  mainSource = mainSource.replace('public class MainActivity extends BridgeActivity {', 'public class MainActivity extends BridgeActivity {\\n    @Override\\n    public void onCreate(android.os.Bundle savedInstanceState) {\\n        registerPlugin(MfitHapticsPlugin.class);\\n        super.onCreate(savedInstanceState);\\n    }');
+}
 await writeFile(mainPath, mainSource);
-console.log('Generated native Live Update integration and removed overlay island.');
+console.log('Generated native haptics, Live Update, and route sharing integrations.');

@@ -735,8 +735,8 @@ function centerMapOnUser(){
  if(!navigator.geolocation){$('mapNote').textContent='Location is unavailable in this browser';return}
  if(!window.isSecureContext){$('mapNote').textContent='Open the secure HTTPS version to use your location';return}
  if(!liveMap)initLiveMap();
- $('mapNote').textContent='Improving GPS accuracy… keep location enabled';$('mapBadge').textContent='LOCATING';
- let locateWatch=null,locateTimer=null,bestPosition=null,finished=false;
+ $('mapNote').textContent='در حال دریافت موقعیت دقیق GPS؛ لطفاً تا ۳۰ ثانیه صبر کن…';$('mapBadge').textContent='GPS SEARCHING';
+ let locateWatch=null,locateTimer=null,bestPosition=null,finished=false,startedAt=Date.now();
  const stop=()=>{if(finished)return;finished=true;if(locateWatch!==null)navigator.geolocation.clearWatch(locateWatch);if(locateTimer)clearTimeout(locateTimer)};
  const showBest=()=>{
   if(!bestPosition||!liveMap)return;
@@ -744,21 +744,21 @@ function centerMapOnUser(){
   liveMap.setView(ll,Math.max(16,Math.min(19,Math.round(19-Math.log2(Math.max(1,acc/5))))),{animate:true});
   if(!userLocationMarker)userLocationMarker=L.circleMarker(ll,{radius:9,color:'#fff',weight:3,fillColor:'#258fdb',fillOpacity:1}).addTo(liveMap);else userLocationMarker.setLatLng(ll);
   gpsSignal(acc<=8?'excellent':acc<=15?'good':acc<=25?'fair':'weak','±'+Math.round(acc)+' m accuracy');
-  $('mapNote').textContent='Current GPS position · accuracy ±'+Math.round(acc)+' m'+(acc>25?' · move outdoors for a better fix':'');
-  $('mapBadge').textContent=acc<=15?'YOUR LOCATION':'GPS ACCURACY';
+  $('mapNote').textContent='موقعیت GPS · دقت تخمینی ±'+Math.round(acc)+' متر'+(acc>15?' · برای دقت بهتر فضای باز و GPS دقیق گوشی را فعال کن':'');
+  $('mapBadge').textContent=acc<=10?'PRECISE LOCATION':'GPS ACCURACY';
  };
- const finish=()=>{stop();if(bestPosition)showBest();else{$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='GPS fix unavailable. Check location permission and device GPS settings.'}};
+ const finish=()=>{stop();if(bestPosition)showBest();else{$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='موقعیت GPS دریافت نشد. مجوز مکان‌یابی و GPS گوشی را بررسی کن.'}};
  try{
   locateWatch=navigator.geolocation.watchPosition(pos=>{
    if(finished)return;
-   const acc=Number(pos.coords&&pos.coords.accuracy);
-   if(!Number.isFinite(acc)||acc<=0)return;
+   const c=pos.coords||{},acc=Number(c.accuracy),age=Date.now()-Number(pos.timestamp||Date.now());
+   if(!Number.isFinite(acc)||acc<=0||age>15000)return;
    if(!bestPosition||acc<Number(bestPosition.coords.accuracy)){bestPosition=pos;showBest()}
-   if(acc<=8)finish();
+   if(acc<=10&&Date.now()-startedAt>=2500)finish();
   },err=>{
-   if(err&&err.code===1){stop();$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='Location permission denied. Allow precise location for M FIT.'}
-  },{enableHighAccuracy:true,maximumAge:0,timeout:25000});
-  locateTimer=setTimeout(finish,12000);
+   if(err&&err.code===1){stop();$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='مجوز موقعیت دقیق را برای M FIT فعال کن.'}
+  },{enableHighAccuracy:true,maximumAge:0,timeout:35000});
+  locateTimer=setTimeout(finish,30000);
  }catch(error){finish()}
 }
 function showTab(tab){document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!==tab));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));$('indicator').classList.toggle('right',tab==='sport');$('indicator').classList.toggle('third',tab==='profile');$('indicator').style.transform=tab==='sport'?'translate3d(100%,0,0)':tab==='profile'?'translate3d(200%,0,0)':'translate3d(0,0,0)';document.querySelector('.app').scrollTop=0;if(tab==='sport'){initLiveMap();setTimeout(()=>{if(liveMap)liveMap.invalidateSize();centerMapOnUser()},180)}if(tab==='profile')renderProfile()}

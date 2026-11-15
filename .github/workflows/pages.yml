@@ -71,3 +71,5 @@ jobs:
 # Publish map attribution cleanup from mfit-complete-fixes.
 
 # Publish map-layer switching fix for hidden Leaflet attribution control.
+
+# Publish route-share canvas export compatibility fix from mfit-complete-fixes.

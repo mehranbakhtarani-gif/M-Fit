@@ -76,3 +76,5 @@ jobs:
 
 # Refresh Pages for precise route-export error reporting and PNG fallback.
 # Redeploy the latest M-FIT application source from mfit-complete-fixes.
+
+# Publish GPS route filtering fix and refresh PWA shell cache.

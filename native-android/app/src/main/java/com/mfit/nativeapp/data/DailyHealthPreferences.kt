@@ -24,9 +24,15 @@ object DailyHealthPreferences {
     fun recordStepCounter(context: Context, totalSinceBoot: Long, day: String = todayKey()): Int {
         val p = prefs(context)
         if (p.getString(KEY_DAY, null) != day) {
-            p.edit().putString(KEY_DAY, day).putLong(KEY_LAST_COUNTER, totalSinceBoot).putInt(KEY_ACCUMULATED, 0).apply()
-            p.edit().putInt("steps_$day", 0).apply()
-            return 0
+            // Keep any imported/manual total for this date and continue counting from
+            // the current hardware counter without treating the boot total as today's steps.
+            val existingDailyTotal = p.getInt("steps_$day", 0).coerceAtLeast(0)
+            p.edit()
+                .putString(KEY_DAY, day)
+                .putLong(KEY_LAST_COUNTER, totalSinceBoot)
+                .putInt(KEY_ACCUMULATED, existingDailyTotal)
+                .apply()
+            return existingDailyTotal
         }
         val last = p.getLong(KEY_LAST_COUNTER, totalSinceBoot)
         val accumulated = p.getInt(KEY_ACCUMULATED, 0)

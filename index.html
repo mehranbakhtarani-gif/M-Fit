@@ -714,7 +714,7 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  const save=()=>{try{localStorage.setItem(storeKey,JSON.stringify(state))}catch(e){}};
  const fmt=n=>{n=Math.max(0,Math.floor(n));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(v=>String(v).padStart(2,'0')).join(':')};
  function paint(){
-  const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTimeInput=$('fastStartTime');
+  const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTimeInput=$('fastStartTime'),startTimeButton=$('fastStartTimeButton');
   if(!clock||!status||!bar||!remaining||!toggle||!hours)return;
   const goal=state.target*3600000;
   if(state.fasting&&state.start>0){

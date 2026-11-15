@@ -208,3 +208,16 @@ Notes and remaining work:
 - In-progress activity sessions in a backup are restored as INTERRUPTED so an imported backup cannot silently restart GPS tracking.
 - Backup/restore currently covers Native app data only. A dedicated, verified PWA export/import adapter remains a release gate; do not imply that this file contains legacy PWA localStorage or IndexedDB data.
 - Physical-device testing is still required for Android document-provider behavior, backup round-trip, large route histories, and restore interruption.
+
+
+## Release signing pipeline
+
+- The native Gradle module now supports a release signing configuration supplied only through environment variables; no keystore or passwords are committed to the repository.
+- CI always builds and uploads the debug APK. It builds and uploads a release APK only when all four repository Actions secrets are configured:
+  - `MFIT_RELEASE_KEYSTORE_BASE64`: base64-encoded persistent JKS/PKCS12 keystore.
+  - `MFIT_RELEASE_STORE_PASSWORD`: keystore password.
+  - `MFIT_RELEASE_KEY_ALIAS`: key alias.
+  - `MFIT_RELEASE_KEY_PASSWORD`: key password.
+- Add these under GitHub repository Settings → Secrets and variables → Actions → New repository secret. Never put the keystore or passwords in source control or chat.
+- The release pipeline does not silently fall back to debug signing. If any secret is missing, only the debug APK is produced.
+- Upgrade compatibility with any previously installed APK remains unverified until the same original signing certificate is confirmed. A different key cannot update an existing installation with the same application ID.

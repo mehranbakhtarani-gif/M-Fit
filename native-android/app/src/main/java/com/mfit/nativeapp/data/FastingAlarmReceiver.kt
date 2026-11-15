@@ -2,7 +2,7 @@ package com.mfit.nativeapp.data
 
 import android.Manifest
 import android.app.AlarmManager
-import android.app.BroadcastReceiver
+import android.content.BroadcastReceiver
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager

@@ -86,6 +86,8 @@ jobs:
           grep -q 'timePickerTick' www/index.html
           grep -q 'timePickerSelectHaptic' www/index.html
           grep -q 'MfitNativeHaptics' www/index.html
+          grep -q 'MfitNativeNotifications' www/index.html
+          grep -q 'scheduleFastingComplete' native-bridge.js
           grep -q "registerPlugin('MfitHaptics')" native-bridge.js
           grep -q 'MfitHapticsPlugin' scripts/prepare-android.mjs
           echo "Verified exact PWA HTML/assets parity and native Android wheel haptics."

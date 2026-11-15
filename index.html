@@ -732,32 +732,51 @@ $('profilePhotoInput').onchange=e=>{
 $('bodyDate').value=localDayKey();updateBodyDatePreview();$('bodyDate').addEventListener('change',updateBodyDatePreview);
 $('saveBodyMeasurement').onclick=()=>{const vals={height:$('bodyHeightInput').value,weight:$('bodyWeightInput').value,waist:$('bodyWaistInput').value};if(!vals.height&&!vals.weight&&!vals.waist){toast('Enter at least one measurement');return}for(const [k,v] of Object.entries(vals)){if(v&&(!Number.isFinite(Number(v))||Number(v)<=0)){toast('Check the measurement values');return}}const date=$('bodyDate').value||localDayKey();data.bodyMeasurements=Array.isArray(data.bodyMeasurements)?data.bodyMeasurements:[];data.bodyMeasurements.push({date,height:vals.height?Number(vals.height):'',weight:vals.weight?Number(vals.weight):'',waist:vals.waist?Number(vals.waist):''});data.bodyMeasurements.sort((a,b)=>a.date.localeCompare(b.date));$('bodyHeightInput').value='';$('bodyWeightInput').value='';$('bodyWaistInput').value='';save();renderBodyMeasurements();toast('Measurement saved')};
 function centerMapOnUser(){
- if(!navigator.geolocation){$('mapNote').textContent='Location is unavailable in this browser';return}
- if(!window.isSecureContext){$('mapNote').textContent='Open the secure HTTPS version to use your location';return}
+ const nativeGps=!!(window.MfitNativeGPS&&window.MfitNativeGPS.isNative);
+ if(!nativeGps&&!navigator.geolocation){$('mapNote').textContent='Location is unavailable in this browser';return}
+ if(!nativeGps&&!window.isSecureContext){$('mapNote').textContent='Open the secure HTTPS version to use your location';return}
  if(!liveMap)initLiveMap();
- $('mapNote').textContent='در حال دریافت موقعیت دقیق GPS؛ لطفاً تا ۳۰ ثانیه صبر کن…';$('mapBadge').textContent='GPS SEARCHING';
+ $('mapNote').textContent='در حال دریافت دقیق‌ترین موقعیت از سرویس مکان‌یابی گوشی؛ لطفاً تا ۳۰ ثانیه صبر کن…';$('mapBadge').textContent='GPS SEARCHING';
  let locateWatch=null,locateTimer=null,bestPosition=null,finished=false,startedAt=Date.now();
- const stop=()=>{if(finished)return;finished=true;if(locateWatch!==null)navigator.geolocation.clearWatch(locateWatch);if(locateTimer)clearTimeout(locateTimer)};
+ const stop=()=>{
+  if(finished)return;finished=true;
+  if(locateTimer)clearTimeout(locateTimer);
+  if(locateWatch!==null){
+   if(nativeGps)window.MfitNativeGPS.stopGps(locateWatch).catch(()=>{});
+   else navigator.geolocation.clearWatch(locateWatch);
+  }
+ };
  const showBest=()=>{
   if(!bestPosition||!liveMap)return;
-  const c=bestPosition.coords,ll=[c.latitude,c.longitude],acc=Number(c.accuracy)||0;
+  const c=bestPosition.coords||{},ll=[Number(c.latitude),Number(c.longitude)],acc=Number(c.accuracy)||0;
+  if(!Number.isFinite(ll[0])||!Number.isFinite(ll[1]))return;
   liveMap.setView(ll,Math.max(16,Math.min(19,Math.round(19-Math.log2(Math.max(1,acc/5))))),{animate:true});
   if(!userLocationMarker)userLocationMarker=L.circleMarker(ll,{radius:9,color:'#fff',weight:3,fillColor:'#258fdb',fillOpacity:1}).addTo(liveMap);else userLocationMarker.setLatLng(ll);
   gpsSignal(acc<=8?'excellent':acc<=15?'good':acc<=25?'fair':'weak','±'+Math.round(acc)+' m accuracy');
-  $('mapNote').textContent='موقعیت GPS · دقت تخمینی ±'+Math.round(acc)+' متر'+(acc>15?' · برای دقت بهتر فضای باز و GPS دقیق گوشی را فعال کن':'');
+  $('mapNote').textContent='موقعیت '+(nativeGps?'سرویس بومی اندروید':'GPS')+' · دقت تخمینی ±'+Math.round(acc)+' متر'+(acc>15?' · برای دقت بهتر در فضای باز بمان و مکان‌یابی دقیق را فعال کن':'');
   $('mapBadge').textContent=acc<=10?'PRECISE LOCATION':'GPS ACCURACY';
  };
- const finish=()=>{stop();if(bestPosition)showBest();else{$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='موقعیت GPS دریافت نشد. مجوز مکان‌یابی و GPS گوشی را بررسی کن.'}};
+ const accept=pos=>{
+  if(finished||!pos)return;
+  const c=pos.coords||{},acc=Number(c.accuracy),stamp=Number(pos.timestamp||pos.time)||Date.now(),age=Math.max(0,Date.now()-stamp);
+  if(!Number.isFinite(acc)||acc<=0||age>30000)return;
+  if(!bestPosition||acc<Number((bestPosition.coords||{}).accuracy)){bestPosition=pos;showBest()}
+  if(acc<=8&&Date.now()-startedAt>=2500)finish();
+ };
+ const finish=()=>{if(finished)return;stop();if(bestPosition)showBest();else{$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='موقعیت GPS دریافت نشد. مجوز مکان‌یابی دقیق و GPS گوشی را بررسی کن.'}};
  try{
-  locateWatch=navigator.geolocation.watchPosition(pos=>{
-   if(finished)return;
-   const c=pos.coords||{},acc=Number(c.accuracy),age=Date.now()-Number(pos.timestamp||Date.now());
-   if(!Number.isFinite(acc)||acc<=0||age>15000)return;
-   if(!bestPosition||acc<Number(bestPosition.coords.accuracy)){bestPosition=pos;showBest()}
-   if(acc<=10&&Date.now()-startedAt>=2500)finish();
-  },err=>{
-   if(err&&err.code===1){stop();$('mapBadge').textContent='LOCATION UNAVAILABLE';$('mapNote').textContent='مجوز موقعیت دقیق را برای M FIT فعال کن.'}
-  },{enableHighAccuracy:true,maximumAge:0,timeout:35000});
+  if(nativeGps){
+   window.MfitNativeGPS.startGps(accept,err=>{
+    if(err&&Number(err.code)===1&&!bestPosition){$('mapNote').textContent='مجوز مکان‌یابی دقیق را برای M-FIT فعال کن.'}
+   }).then(id=>{
+    if(finished)window.MfitNativeGPS.stopGps(id).catch(()=>{});
+    else locateWatch=id;
+   }).catch(()=>{if(!bestPosition)finish()});
+  }else{
+   locateWatch=navigator.geolocation.watchPosition(accept,err=>{
+    if(err&&err.code===1&&!bestPosition){$('mapNote').textContent='مجوز موقعیت دقیق را برای M-FIT فعال کن.'}
+   },{enableHighAccuracy:true,maximumAge:0,timeout:35000});
+  }
   locateTimer=setTimeout(finish,30000);
  }catch(error){finish()}
 }

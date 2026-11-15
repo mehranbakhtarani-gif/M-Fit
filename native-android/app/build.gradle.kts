@@ -21,7 +21,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.mfit.wellness"
+        applicationId = "com.mfit.nativeapp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

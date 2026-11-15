@@ -181,3 +181,12 @@ Notes and remaining work:
 - Food log supports manual food name and calorie entry, per-item deletion, and daily calorie totals.
 - Daily steps, hydration, and food entries are stored locally in app-private SharedPreferences. No existing PWA localStorage or IndexedDB data is read, changed, or deleted.
 - Remaining Health parity work: fasting timer, AI food scan (requires a real secure endpoint), weekly insights, motion fallback for devices without a step-counter sensor, and import/export/migration from PWA data.
+
+
+### Native fasting timer and completion reminder
+
+- Added persistent fasting sessions with 14, 16, and 18-hour presets.
+- The countdown survives app restarts by storing absolute start and target-end timestamps locally.
+- An Android AlarmManager reminder is scheduled for the target end time; notification permission can be requested from the Health screen on Android 13+.
+- Ending a session cancels its pending reminder.
+- The reminder uses an inexact idle-compatible alarm so it does not require the special exact-alarm permission. Delivery can be delayed by Android battery policies.

@@ -376,7 +376,7 @@ private fun HealthDashboardScreen() {
                 androidx.compose.material3.LinearProgressIndicator(progress = { stepProgress }, modifier = Modifier.fillMaxWidth())
                 Text(
                     if (steps >= 7000) "به هدف ۷۰۰۰ قدم رسیدی."
-                    else "تا هدف روزانه \${String.format(Locale.US, "%,d", 7000 - steps)} قدم باقی مانده.",
+                    else "تا هدف روزانه ${String.format(Locale.US, "%,d", 7000 - steps)} قدم باقی مانده.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (!hasActivityPermission) {
@@ -428,7 +428,7 @@ private fun HealthDashboardScreen() {
                 } else {
                     foods.forEach { item ->
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text("\${item.name} · \${item.calories} kcal", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            Text("${item.name} · ${item.calories} kcal", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
                             TextButton(onClick = { foods = DailyHealthPreferences.removeFood(context, item.id) }) { Text("حذف") }
                         }
                     }

@@ -1,6 +1,7 @@
 package com.mfit.nativeapp.core.activity
 
 class ActivitySessionEngine(
+    private val bodyMassKg: Double? = null,
     private val routeFilter: RoutePointFilter = RoutePointFilter()
 ) {
     private var type: ActivityType = ActivityType.WALK
@@ -87,8 +88,8 @@ class ActivitySessionEngine(
         val averageSpeed = if (elapsed > 0L) distanceMeters / (elapsed / 1000.0) else 0.0
         val currentSpeed = if (recentSpeeds.isEmpty()) 0.0 else recentSpeeds.average()
         val hours = elapsed / 3_600_000.0
-        // MET-based estimate; caller should supply body mass in a later profile-aware layer.
-        val calories = (type.met * 70.0 * hours).roundToInt()
+        // Approximate MET-based gross energy estimate; unavailable until body mass is provided.
+        val calories = bodyMassKg?.let { (type.met * it * hours).roundToInt() } ?: 0
         return ActivitySnapshot(
             type = type,
             status = status,

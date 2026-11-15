@@ -297,15 +297,24 @@ try {
 <script src="./native-bridge.js"></script>
 <script>
 const $=id=>document.getElementById(id),key='mfit-v1';
+const storageGet=name=>{try{return localStorage.getItem(name)}catch(error){console.warn('M FIT storage read unavailable:',error);return null}};
+const storageSet=(name,value)=>{try{localStorage.setItem(name,value);return true}catch(error){console.error('M FIT storage write failed:',error);return false}};
+const storageRemove=name=>{try{localStorage.removeItem(name);return true}catch(error){console.warn('M FIT storage remove failed:',error);return false}};
 const FOOD_AI_ENDPOINT='https://m-fit-food-ai.YOUR-SUBDOMAIN.workers.dev';
 const localDayKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
-const todayKey=localDayKey();
-let data=JSON.parse(localStorage.getItem(key)||'{}');
-data.days=data.days||{};data.days[todayKey]=data.days[todayKey]||{steps:0,water:0,food:[],burned:0,stepCalories:0};let day=data.days[todayKey];day.stepCalories=Number(day.stepCalories)||0;
-if(!Number.isFinite(Number(data.totalBurnedKcal))){const savedActivityCalories=(Array.isArray(data.history)?data.history:[]).reduce((sum,item)=>sum+Number(item.kcal||0),0);const savedStepCalories=Object.values(data.days).reduce((sum,d)=>sum+Number(d?.stepCalories||0),0);data.totalBurnedKcal=Math.round(savedActivityCalories+savedStepCalories)}else data.totalBurnedKcal=Math.max(0,Number(data.totalBurnedKcal)||0);
+const makeEmptyDay=()=>({steps:0,water:0,food:[],burned:0,stepCalories:0});
+const normaliseDay=source=>{const d=source&&typeof source==='object'&&!Array.isArray(source)?source:{};d.steps=Math.max(0,Math.floor(Number(d.steps)||0));d.water=Math.max(0,Math.min(40,Math.floor(Number(d.water)||0)));d.food=Array.isArray(d.food)?d.food.filter(x=>x&&typeof x==='object').map(x=>({name:String(x.name||'Food'),cal:Math.max(0,Number(x.cal)||0)})):[];d.burned=Math.max(0,Number(d.burned)||0);d.stepCalories=Math.max(0,Number(d.stepCalories)||0);return d};
+let todayKey=localDayKey();
+let data={};
+const storedAppData=storageGet(key);
+if(storedAppData){try{const parsed=JSON.parse(storedAppData);if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new Error('Stored app data is not an object');data=parsed}catch(error){storageSet('mfit-v1-recovery-'+Date.now(),storedAppData);console.error('M FIT found damaged saved data; preserved the original and opened a safe empty data set.',error)}}
+if(!data.days||typeof data.days!=='object'||Array.isArray(data.days))data.days={};
+data.days[todayKey]=normaliseDay(data.days[todayKey]||makeEmptyDay());
+let day=data.days[todayKey];
+if(!Number.isFinite(Number(data.totalBurnedKcal))){const savedActivityCalories=(Array.isArray(data.history)?data.history:[]).reduce((sum,item)=>sum+Math.max(0,Number(item?.kcal)||0),0);const savedStepCalories=Object.values(data.days).reduce((sum,d)=>sum+Math.max(0,Number(d?.stepCalories)||0),0);data.totalBurnedKcal=Math.round(savedActivityCalories+savedStepCalories)}else data.totalBurnedKcal=Math.max(0,Number(data.totalBurnedKcal)||0);
 let mode='Walk',active=false,activitySessionStarted=false,startedAt=0,elapsed=0,activityTimer=null,activityDraftTimer=null,watchId=null,gpsStarting=false,gpsStartRequest=0,coords=[],distance=0,historyPeriod='day';
 const activityDraftKey='mfit-active-session-v1';
-let voiceCoachEnabled=true,nextCoachKm=1,lastCoachTimeMark=0,lastCoachReportedSpeed=0,coachVoiceReady=false,currentSpeedKmh=0,gpsSpeedSamples=[],lastSpeedSampleAt=0;let coachVolume=Number(localStorage.getItem("mfitCoachVolume")||75)/100;window.MfitVoiceVolume=coachVolume;
+let voiceCoachEnabled=true,nextCoachKm=1,lastCoachTimeMark=0,lastCoachReportedSpeed=0,coachVoiceReady=false,currentSpeedKmh=0,gpsSpeedSamples=[],lastSpeedSampleAt=0;let coachVolume=Math.max(0,Math.min(1,(Number(storageGet("mfitCoachVolume"))||75)/100));window.MfitVoiceVolume=coachVolume;
 let activityDb=null,activityStoreReady=false,activityStoreInitPromise=null,historyVisibleCount=20;
 const activityTrackCache=new WeakMap();
 const mapStyleStorageKey='mfit-map-style-v1';
@@ -362,8 +371,17 @@ function initLiveMap(){
  setTimeout(()=>liveMap&&liveMap.invalidateSize(),250);
 }
 if(!data.waterResetToZeroV1){day.water=0;data.waterResetToZeroV1=true;}
-if(data.waterDate!==localDayKey()){day.water=0;data.waterDate=localDayKey()}
-const save=()=>{data.days[todayKey]=day;data.waterDate=localDayKey();localStorage.setItem(key,JSON.stringify(data))};
+if(data.waterDate!==todayKey){day.water=0;data.waterDate=todayKey}
+const save=()=>{data.days[todayKey]=day;data.waterDate=todayKey;return storageSet(key,JSON.stringify(data))};
+function ensureCurrentDay(){
+ const current=localDayKey();if(current===todayKey)return false;
+ todayKey=current;data.days=data.days&&typeof data.days==='object'&&!Array.isArray(data.days)?data.days:{};
+ day=normaliseDay(data.days[todayKey]||makeEmptyDay());
+ if(data.waterDate!==current)day.water=0;
+ data.days[todayKey]=day;data.waterDate=current;
+ const dateLabel=$('today');if(dateLabel)dateLabel.textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+ save();return true;
+}
 function openActivityDatabase(){return new Promise((resolve,reject)=>{if(!('indexedDB' in window)){reject(new Error('IndexedDB unavailable'));return}const request=indexedDB.open('mfit-activity-history',1);request.onupgradeneeded=()=>{const db=request.result;if(!db.objectStoreNames.contains('activities')){const store=db.createObjectStore('activities',{keyPath:'id'});store.createIndex('timestamp','timestamp',{unique:false})}};request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('Could not open activity database'))})}
 function activityDbRequest(mode,action,value){return new Promise((resolve,reject)=>{if(!activityDb){reject(new Error('Activity database is not ready'));return}const tx=activityDb.transaction('activities',mode),store=tx.objectStore('activities');let request,result;if(action==='getAll')request=store.getAll();else if(action==='clear')request=store.clear();else request=store.put(value);request.onsuccess=()=>{result=request.result};request.onerror=()=>reject(request.error||new Error('Activity database request failed'));tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||new Error('Activity database transaction failed'));tx.onabort=()=>reject(tx.error||new Error('Activity database transaction aborted'))})}
 async function initActivityHistoryStore(){try{activityDb=await openActivityDatabase();const stored=await activityDbRequest('readonly','getAll'),legacy=Array.isArray(data.history)?data.history:[],merged=new Map();stored.forEach(item=>{if(item&&item.id)merged.set(item.id,item)});legacy.forEach((item,index)=>{const record={...item,id:item.id||('legacy-'+String(item.timestamp||Date.now())+'-'+index)};if(!merged.has(record.id))merged.set(record.id,record)});const all=[...merged.values()].sort((a,b)=>(Number(b.timestamp)||0)-(Number(a.timestamp)||0));const tx=activityDb.transaction('activities','readwrite'),store=tx.objectStore('activities');all.forEach(item=>store.put(item));await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('Activity history sync failed'));tx.onabort=()=>reject(tx.error||new Error('Activity history sync aborted'))});data.history=all;activityStoreReady=true;save();renderHistory();renderWeeklyReport();if(typeof renderProfile==='function')renderProfile()}catch(error){console.warn('M FIT activity history storage:',error);activityStoreReady=false;data.history=Array.isArray(data.history)?data.history:[];save();renderHistory()}}
@@ -447,7 +465,7 @@ function renderActivity(){
  const pulse=$('activityPulse');if(pulse){pulse.classList.toggle('is-active',active);pulse.querySelector('.pulse-label').textContent=active?'ACTIVITY IN PROGRESS':(activitySessionStarted?'ACTIVITY PAUSED':'ACTIVITY STANDBY')}
  liveUpdateStartOrUpdate(seconds,km);
 }
-function render(){ $('steps').innerHTML=day.steps.toLocaleString()+' <span class="metric-unit">steps</span>';$('stepbar').style.width=Math.min(100,day.steps/7000*100)+'%';$('burned').innerHTML=day.burned.toLocaleString()+' <span class="metric-unit">kcal</span>';$('burnbar').style.width=Math.min(100,day.burned/500*100)+'%';$('waterCount').innerHTML=day.water+' <span class="metric-unit">glasses</span>';$('waterText').textContent=day.water+' / 8 glasses';$('waterbar').style.width=Math.min(100,day.water/8*100)+'%';let eaten=day.food.reduce((a,b)=>a+b.cal,0);$('eaten').innerHTML=eaten+' <span class="metric-unit">kcal</span>';$('foodList').textContent=day.food.length?day.food.map(x=>x.name+' · '+x.cal+' kcal').join('  /  '):'No meals logged today';renderWeek();save()}
+function render(){ensureCurrentDay(); $('steps').innerHTML=day.steps.toLocaleString()+' <span class="metric-unit">steps</span>';$('stepbar').style.width=Math.min(100,day.steps/7000*100)+'%';$('burned').innerHTML=day.burned.toLocaleString()+' <span class="metric-unit">kcal</span>';$('burnbar').style.width=Math.min(100,day.burned/500*100)+'%';$('waterCount').innerHTML=day.water+' <span class="metric-unit">glasses</span>';$('waterText').textContent=day.water+' / 8 glasses';$('waterbar').style.width=Math.min(100,day.water/8*100)+'%';let eaten=day.food.reduce((a,b)=>a+b.cal,0);$('eaten').innerHTML=eaten+' <span class="metric-unit">kcal</span>';$('foodList').textContent=day.food.length?day.food.map(x=>x.name+' · '+x.cal+' kcal').join('  /  '):'No meals logged today';renderWeek();save()}
 function renderWeek(){const arr=[];for(let i=6;i>=0;i--){const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-i);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');arr.push({label:['S','M','T','W','T','F','S'][d.getDay()],v:Number(data.days[k]?.steps)||0})}const max=Math.max(7000,...arr.map(x=>x.v));const chart=$('weekChart');if(!chart)return;chart.innerHTML=arr.map((x,i)=>'<div class="bar-col"><div class="bar '+(i===6?'today':'')+'" style="height:'+Math.max(4,x.v/max*82)+'px"></div><span>'+x.label+'</span></div>').join('');renderWeeklyReport()}
 function renderWeeklyReport(){
  const root=$('weeklyReport');if(!root)return;
@@ -489,7 +507,7 @@ function renderWeeklyReport(){
 $('addWater').onclick=()=>{day.water=Math.min(40,day.water+1);render()};
 $('resetWater').onclick=()=>{day.water=0;data.waterDate=localDayKey();render();toast('Hydration reset')};
 $('resetBurned').onclick=()=>{day.burned=0;day.stepCalories=0;save();render();toast('Today’s burned calories reset · all-time total preserved')};
-function checkWaterDay(){const current=localDayKey();if(data.waterDate!==current){day.water=0;data.waterDate=current;render()}}
+function checkWaterDay(){if(ensureCurrentDay())render()}
 setInterval(checkWaterDay,15000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkWaterDay()});
 
 let motionOn=false,wasRising=false,peak=0,gravity={x:0,y:0,z:0},gravityReady=false;
@@ -533,7 +551,9 @@ function walkingCaloriesPerStep(){
  return weight*0.5*(stride/1000);
 }
 function registerWalkingSteps(count){
- if(!count)return;
+ ensureCurrentDay();
+ const steps=Math.floor(Number(count)||0);if(steps<1||steps>10000)return;
+ count=steps;
  day.steps+=count;
  if(!active){
   const oldCalories=Math.round(day.stepCalories||0);
@@ -947,12 +967,12 @@ $('exportRoute').onclick=async()=>{
  }catch(error){console.error('M FIT route share failed:',error);toast(error.message==='Map library did not load'?'نقشه بارگذاری نشد؛ اتصال اینترنت را بررسی کن':'ساخت تصویر مسیر انجام نشد؛ نقشه را باز کن و دوباره امتحان کن')}
  finally{button.disabled=false;button.textContent=oldLabel}
 };
-function resetDailySteps(){day.steps=0;data.days[todayKey]=day;localStorage.setItem(key,JSON.stringify(data));$('steps').innerHTML='0 <span class="metric-unit">steps</span>';$('stepbar').style.width='0%';renderWeek();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')}
+function resetDailySteps(){ensureCurrentDay();day.steps=0;data.days[todayKey]=day;save();$('steps').innerHTML='0 <span class="metric-unit">steps</span>';$('stepbar').style.width='0%';renderWeek();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')}
 $('today').textContent=new Date().toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
 enableMotion(false);try{render();renderHistory();}catch(initError){console.error('M FIT render initialization:',initError)}
 activityStoreInitPromise=initActivityHistoryStore();
 restoreActivityDraft();
-window.addEventListener('pagehide',saveActiveSessionDraft);
+window.addEventListener('pagehide',()=>{saveActiveSessionDraft();save()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveActiveSessionDraft();else if(active&&watchId===null)gpsStart()});
 window.addEventListener('pageshow',()=>{if(active&&watchId===null)gpsStart()});
 if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));

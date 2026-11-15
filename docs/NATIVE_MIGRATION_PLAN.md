@@ -61,6 +61,19 @@ Current strategy: incremental migration, not a rewrite-in-place. Preserve the cu
 - [ ] Set up signed release build and regression checklist.
 - [ ] Decide separately whether PWA remains a maintained client and how cross-client sync should work.
 
+## Code-level findings from first pass
+- GPS point acceptance currently rejects fixes with accuracy worse than 25 m and ignores movements below a dynamic 2.0–4.5 m threshold. Native implementation should retain raw fixes, apply documented filtering, and test stationary drift / urban canyon cases rather than silently discarding all lower-quality data.
+- Current route sampling and distance calculation are embedded in the main HTML script. The activity state machine, route filter, distance calculation, speed smoothing, calorie estimator, and coach thresholds need to be extracted and covered by deterministic unit tests before porting.
+- Step counting is implemented with `DeviceMotionEvent` and browser-side peak detection. This is not a dependable background step-counting solution; native implementation should evaluate Android `Sensor.TYPE_STEP_COUNTER` / `TYPE_STEP_DETECTOR` with permission and device capability fallbacks.
+- Session draft uses localStorage key `mfit-active-session-v1`, stores at most the last 5,000 coordinates, and expires after 7 days. Recovery is user-confirmed and resumes paused. Preserve this behavior and define what happens when the coordinate cap is reached.
+- Activity history is dual-written to localStorage and IndexedDB. The IndexedDB initialization merges by ID and sorts newest first. Migration must deduplicate legacy records and preserve IDs/timestamps/coordinates; test interrupted writes and IndexedDB-unavailable fallback.
+- The food-photo feature currently points to `https://m-fit-food-ai.YOUR-SUBDOMAIN.workers.dev` in `index.html`. This is a placeholder, so the deployed AI endpoint must be configured/verified before treating the feature as production-ready. Worker expects an allowed Origin and an OpenAI API key in server environment.
+- Route image generation draws Leaflet map tiles into a canvas and explicitly can fail when the tile provider blocks canvas export (CORS). Native route sharing should render a map snapshot using a supported native map SDK or an approved static-map/image pipeline.
+- Current CI creates a fresh Capacitor Android project during each run and only assembles `assembleDebug`. No persistent Android manifest/plugin configuration or release/signing pipeline is checked into the repository.
+
+## Audit conclusion
+The safest native path is a separate Kotlin Android app alongside the existing PWA. Do not wrap the existing HTML again and do not delete Capacitor until feature parity and local-data migration have been verified. The first high-risk feature to port and test is activity tracking (GPS, background service, route filtering, session recovery, history persistence); step counting follows as a separate native sensor module.
+
 ## Current blockers / unknowns
 - Generated Capacitor Android project is not committed, so its exact manifest, SDK levels, plugin registration, and Gradle configuration are not available for audit.
 - The food AI worker contains a placeholder deployment origin in the client code; production endpoint/configuration must be verified before moving this feature.

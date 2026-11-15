@@ -23,6 +23,79 @@ await import('node:fs/promises').then(({writeFile}) => writeFile(colors + '/ic_l
   '<?xml version="1.0" encoding="utf-8"?>\n<resources><color name="ic_launcher_background">#0B1D2B</color></resources>'));
 console.log('Generated Mfit launcher icon resources.');
 
+/* Native Android MediaStore save + ACTION_SEND share integration for route PNGs. */
+const sharePlugin = String.raw\`package com.mfit.wellness.plugins;
+import android.content.ContentValues;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.content.ClipData;
+import android.util.Base64;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.OutputStream;
+
+@CapacitorPlugin(name = "MfitShare")
+public class MfitSharePlugin extends Plugin {
+  private Uri writeImage(PluginCall call) throws Exception {
+    if (Build.VERSION.SDK_INT < 29) throw new Exception("Android 10 or newer is required to save route images.");
+    String encoded = call.getString("data");
+    if (encoded == null || encoded.isEmpty()) throw new Exception("Route image data is empty.");
+    byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+    String name = call.getString("fileName", "mfit-route.png").replaceAll("[^A-Za-z0-9._-]", "_");
+    if (!name.toLowerCase().endsWith(".png")) name += ".png";
+    ContentValues values = new ContentValues();
+    values.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+    values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+    values.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/M-FIT");
+    values.put(MediaStore.Images.Media.IS_PENDING, 1);
+    Uri uri = getContext().getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+    if (uri == null) throw new Exception("Android could not create the image file.");
+    try (OutputStream stream = getContext().getContentResolver().openOutputStream(uri)) {
+      if (stream == null) throw new Exception("Could not open the image file.");
+      stream.write(bytes);
+      stream.flush();
+    } catch (Exception error) {
+      getContext().getContentResolver().delete(uri, null, null);
+      throw error;
+    }
+    ContentValues ready = new ContentValues();
+    ready.put(MediaStore.Images.Media.IS_PENDING, 0);
+    getContext().getContentResolver().update(uri, ready, null, null);
+    return uri;
+  }
+  @PluginMethod public void saveImage(PluginCall call) {
+    try {
+      Uri uri = writeImage(call);
+      JSObject result = new JSObject();
+      result.put("saved", true);
+      result.put("uri", uri.toString());
+      call.resolve(result);
+    } catch (Exception error) { call.reject("Could not save route image: " + error.getMessage(), error); }
+  }
+  @PluginMethod public void shareImage(PluginCall call) {
+    try {
+      Uri uri = writeImage(call);
+      Intent send = new Intent(Intent.ACTION_SEND);
+      send.setType("image/png");
+      send.putExtra(Intent.EXTRA_STREAM, uri);
+      send.setClipData(ClipData.newUri(getContext().getContentResolver(), "M-FIT route", uri));
+      send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+      getActivity().startActivity(Intent.createChooser(send, "Share M-FIT route"));
+      JSObject result = new JSObject();
+      result.put("shared", true);
+      call.resolve(result);
+    } catch (Exception error) { call.reject("Could not open Android sharing: " + error.getMessage(), error); }
+  }
+}\`;
+await writeFile(pluginDir + '/MfitSharePlugin.java', sharePlugin);
+
+
 
 /* Register the native Android step detector plugin in the generated Capacitor project. */
 const javaDir = 'android/app/src/main/java/com/mfit/wellness';
@@ -185,8 +258,8 @@ for (const permission of ['android.permission.ACTIVITY_RECOGNITION', 'android.pe
 }
 await writeFile(manifestPath, manifest);
 if (!mainSource.includes('MfitLiveUpdatePlugin')) {
-  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\nimport com.mfit.wellness.plugins.MfitLiveUpdatePlugin;');
-  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitLiveUpdatePlugin.class);');
+  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\nimport com.mfit.wellness.plugins.MfitLiveUpdatePlugin;\nimport com.mfit.wellness.plugins.MfitSharePlugin;');
+  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitLiveUpdatePlugin.class);\n        registerPlugin(MfitSharePlugin.class);');
 }
 await writeFile(mainPath, mainSource);
 console.log('Generated native Live Update integration and removed overlay island.');

@@ -36,6 +36,10 @@ object DailyHealthPreferences {
         }
         val last = p.getLong(KEY_LAST_COUNTER, totalSinceBoot)
         val accumulated = p.getInt(KEY_ACCUMULATED, 0)
+        if (last == Long.MAX_VALUE) {
+            p.edit().putLong(KEY_LAST_COUNTER, totalSinceBoot).apply()
+            return accumulated
+        }
         val increment = if (totalSinceBoot >= last) (totalSinceBoot - last).coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0
         val updated = (accumulated.toLong() + increment).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
         p.edit().putLong(KEY_LAST_COUNTER, totalSinceBoot).putInt(KEY_ACCUMULATED, updated).putInt("steps_$day", updated).apply()
@@ -44,7 +48,12 @@ object DailyHealthPreferences {
 
     fun resetSteps(context: Context, day: String = todayKey()) {
         val p = prefs(context)
-        p.edit().putString(KEY_DAY, day).putInt(KEY_ACCUMULATED, 0).putInt("steps_$day", 0).apply()
+        p.edit()
+            .putString(KEY_DAY, day)
+            .putLong(KEY_LAST_COUNTER, Long.MAX_VALUE)
+            .putInt(KEY_ACCUMULATED, 0)
+            .putInt("steps_$day", 0)
+            .apply()
     }
 
     fun steps(context: Context, day: String = todayKey()): Int {

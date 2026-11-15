@@ -71,15 +71,23 @@ jobs:
           done
       - name: Prepare web app
         run: npm run prepare:web
-      - name: Verify latest PWA UI is included in Android web bundle
+      - name: Verify exact PWA UI and native haptics are included in Android bundle
         run: |
           test -s www/index.html
+          cmp -s index.html www/index.html
+          for file in icon.svg icon-192.svg icon-512.svg manifest.webmanifest sw.js; do
+            if [ -f "$file" ]; then cmp -s "$file" "www/$file"; fi
+          done
+          if [ -d assets ]; then diff -qr assets www/assets; fi
           grep -q 'fast-time-wheel' www/index.html
           grep -q 'fastHoursTrigger' www/index.html
           grep -q 'fast-settings-row' www/index.html
           grep -q 'timePickerTick' www/index.html
           grep -q 'timePickerSelectHaptic' www/index.html
-          echo "Verified fasting wheel, target-hours control, compact card layout, and haptic feedback in Android bundle."
+          grep -q 'MfitNativeHaptics' www/index.html
+          grep -q "registerPlugin('MfitHaptics')" native-bridge.js
+          grep -q 'MfitHapticsPlugin' scripts/prepare-android.mjs
+          echo "Verified exact PWA HTML/assets parity and native Android wheel haptics."
       - name: Generate Android project
         run: npx cap add android
       - name: Generate Mfit launcher resources and native Live Update integration

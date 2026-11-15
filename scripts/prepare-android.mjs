@@ -28,6 +28,7 @@ const javaDir = 'android/app/src/main/java/com/mfit/wellness';
 await mkdir(javaDir, { recursive: true });
 const pluginDir = javaDir + '/plugins';
 await mkdir(pluginDir, { recursive: true });
+const { readFile, writeFile } = await import('node:fs/promises');
 /* Native Android MediaStore save + ACTION_SEND share integration for route PNGs. */
 const sharePlugin = String.raw`package com.mfit.wellness.plugins;
 import android.content.ContentValues;
@@ -99,7 +100,7 @@ public class MfitSharePlugin extends Plugin {
   }
 }`;
 await writeFile(pluginDir + '/MfitSharePlugin.java', sharePlugin);
-const { readFile, writeFile } = await import('node:fs/promises');
+
 const javaSource = [
 'package com.mfit.wellness.plugins;',
 'import android.content.Context;',

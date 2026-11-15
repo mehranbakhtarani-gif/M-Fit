@@ -144,6 +144,7 @@ class ActivityLocationService : Service() {
         try {
             fusedClient.requestLocationUpdates(request, locationCallback, mainLooper)
         } catch (_: SecurityException) {
+            _snapshot.value = null
             stopSelf()
         }
     }
@@ -264,6 +265,10 @@ class ActivityLocationService : Service() {
         callback?.let { fusedClient.removeLocationUpdates(it) }
         callback = null
         isActive = false
+        val currentStatus = engine?.snapshot(System.currentTimeMillis())?.status
+        if (currentStatus == SessionStatus.RUNNING || currentStatus == SessionStatus.PAUSED) {
+            _snapshot.value = null
+        }
         tickerJob?.cancel()
         tickerJob = null
         serviceScope.cancel()

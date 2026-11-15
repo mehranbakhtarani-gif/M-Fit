@@ -61,3 +61,5 @@ jobs:
 # Publish compact fasting settings row above the start button.
 
 # Publish GPS resilience and background step-sensor improvements from mfit-complete-fixes.
+
+# Publish resilient local storage, daily rollover, and wake-up step sensor improvements.

@@ -235,7 +235,7 @@ private fun MfitApp() {
                                     Text("زمان: ${snapshot.elapsedMillis / 3_600_000L}:%02d:%02d".format((snapshot.elapsedMillis / 60_000L) % 60L, (snapshot.elapsedMillis / 1_000L) % 60L), style = MaterialTheme.typography.titleMedium)
                                     Text("مسافت: %.2f کیلومتر".format(Locale.US, snapshot.distanceMeters / 1000.0))
                                     Text("سرعت فعلی: %.1f km/h  ·  میانگین: %.1f km/h".format(Locale.US, snapshot.currentSpeedMetersPerSecond * 3.6, snapshot.averageSpeedMetersPerSecond * 3.6))
-                                    Text(if (savedWeightKg == null) "کالری: برای محاسبه، وزن را در پروفایل ثبت کنید." else "کالری تخمینی: ${snapshot.calories} kcal")
+                                    Text(if (snapshot.calories > 0) "کالری تخمینی: ${snapshot.calories} kcal" else "کالری این فعالیت در دسترس نیست؛ وزن را پیش از شروع فعالیت در پروفایل ثبت کنید.")
                                     Text("نقاط GPS: ${snapshot.points.size}", style = MaterialTheme.typography.labelSmall)
                                 }
                             }

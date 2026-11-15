@@ -23,6 +23,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
@@ -35,6 +39,7 @@ class ActivityLocationService : Service() {
     private var sessionId: String? = null
     private var callback: LocationCallback? = null
     private var activityType: ActivityType = ActivityType.WALK
+    private var tickerJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -63,6 +68,8 @@ class ActivityLocationService : Service() {
         engine = ActivitySessionEngine()
         val now = System.currentTimeMillis()
         engine?.start(activityType, now)
+        publishSnapshot()
+        startSnapshotTicker()
 
         val notification = buildNotification("در حال ثبت مسیر")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -129,6 +136,7 @@ class ActivityLocationService : Service() {
                         }
                     }
                 }
+                publishSnapshot()
                 updateNotification()
             }
         }
@@ -147,6 +155,7 @@ class ActivityLocationService : Service() {
         callback?.let { fusedClient.removeLocationUpdates(it) }
         callback = null
         persistSnapshot(SessionStatus.PAUSED, null)
+        publishSnapshot()
         updateNotification("فعالیت متوقف شده")
     }
 
@@ -155,6 +164,7 @@ class ActivityLocationService : Service() {
         if (!active.resume(System.currentTimeMillis())) return
         requestLocationUpdates()
         persistSnapshot(SessionStatus.RUNNING, null)
+        publishSnapshot()
         updateNotification("در حال ثبت مسیر")
     }
 
@@ -164,6 +174,9 @@ class ActivityLocationService : Service() {
         callback = null
         val now = System.currentTimeMillis()
         val snapshot = active.finish(now) ?: return
+        publishSnapshot(snapshot)
+        tickerJob?.cancel()
+        tickerJob = null
         val id = sessionId
         if (id != null) {
             serviceScope.launch(databaseDispatcher) {
@@ -193,6 +206,20 @@ class ActivityLocationService : Service() {
                 snapshot.distanceMeters, snapshot.calories
             )
         }
+    }
+
+    private fun startSnapshotTicker() {
+        tickerJob?.cancel()
+        tickerJob = serviceScope.launch {
+            while (engine != null) {
+                publishSnapshot()
+                delay(1_000L)
+            }
+        }
+    }
+
+    private fun publishSnapshot(snapshot: ActivitySnapshot? = engine?.snapshot(System.currentTimeMillis())) {
+        _snapshot.value = snapshot
     }
 
     private fun updateNotification(message: String? = null) {
@@ -237,6 +264,8 @@ class ActivityLocationService : Service() {
         callback?.let { fusedClient.removeLocationUpdates(it) }
         callback = null
         isActive = false
+        tickerJob?.cancel()
+        tickerJob = null
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -244,6 +273,9 @@ class ActivityLocationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        private val _snapshot = MutableStateFlow<ActivitySnapshot?>(null)
+        val snapshot: StateFlow<ActivitySnapshot?> = _snapshot.asStateFlow()
+
         @Volatile var isActive: Boolean = false
             private set
         const val ACTION_START = "com.mfit.nativeapp.location.START"

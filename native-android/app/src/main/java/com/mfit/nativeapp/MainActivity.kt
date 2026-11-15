@@ -374,11 +374,11 @@ private fun HealthDashboardScreen() {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge)
-                Text("%,d قدم".format(Locale.US, steps), style = MaterialTheme.typography.headlineMedium)
+                Text("$steps قدم", style = MaterialTheme.typography.headlineMedium)
                 androidx.compose.material3.LinearProgressIndicator(progress = { stepProgress }, modifier = Modifier.fillMaxWidth())
                 Text(
                     if (steps >= 7000) "به هدف ۷۰۰۰ قدم رسیدی."
-                    else "تا هدف روزانه ${String.format(Locale.US, "%,d", 7000 - steps)} قدم باقی مانده.",
+                    else "تا هدف روزانه ${(7000 - steps).coerceAtLeast(0)} قدم باقی مانده.",
                     style = MaterialTheme.typography.bodySmall
                 )
                 if (!hasActivityPermission) {

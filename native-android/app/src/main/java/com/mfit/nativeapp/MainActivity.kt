@@ -55,6 +55,7 @@ import com.mfit.nativeapp.data.UserProfilePreferences
 import com.mfit.nativeapp.data.DailyHealthPreferences
 import com.mfit.nativeapp.data.FastingPreferences
 import com.mfit.nativeapp.data.FastingSession
+import com.mfit.nativeapp.data.FastingAlarmReceiver
 import com.mfit.nativeapp.location.ActivityLocationService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -355,6 +356,12 @@ private fun HealthDashboardScreen() {
     }
     var foodName by remember { mutableStateOf("") }
     var foodCalories by remember { mutableStateOf("") }
+    var hasNotificationPermission by remember {
+        mutableStateOf(android.os.Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED)
+    }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasNotificationPermission = granted
+    }
     var hasActivityPermission by remember {
         mutableStateOf(
             android.os.Build.VERSION.SDK_INT < 29 ||
@@ -436,13 +443,21 @@ private fun HealthDashboardScreen() {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Button(onClick = {
                             fastingSession = FastingPreferences.start(context, 14)
+                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
                         }) { Text("۱۴ ساعت") }
                         Button(onClick = {
                             fastingSession = FastingPreferences.start(context, 16)
+                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
                         }) { Text("۱۶ ساعت") }
                         Button(onClick = {
                             fastingSession = FastingPreferences.start(context, 18)
+                            fastingSession?.let { FastingAlarmReceiver.schedule(context, it) }
                         }) { Text("۱۸ ساعت") }
+                    }
+                    if (!hasNotificationPermission && android.os.Build.VERSION.SDK_INT >= 33) {
+                        Button(onClick = { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }) {
+                            Text("فعال‌سازی اعلان پایان روزه")
+                        }
                     }
                 } else {
                     val remaining = (fastingSession!!.targetEndAtMillis - clockNow).coerceAtLeast(0L)
@@ -454,6 +469,7 @@ private fun HealthDashboardScreen() {
                     )
                     Text("زمان سپری‌شده: ${formatFastingDuration(elapsed)}", style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = {
+                        FastingAlarmReceiver.cancel(context)
                         FastingPreferences.stop(context)
                         fastingSession = null
                     }) { Text("پایان روزه‌داری") }

@@ -26,3 +26,16 @@ The script opens IndexedDB in read-only mode, does not clear or rewrite localSto
 - Keep the exported JSON private; it may contain location tracks and personal activity history.
 - Do not uninstall, clear browser storage, or reset the PWA until the native import has been implemented and verified.
 - The native app's Profile → Restore Data action accepts this PWA backup format. Import is additive: existing native preferences and records are preserved, duplicate sessions/route points are ignored, and unfinished drafts are restored as interrupted activities. Daily steps, water, food logs, fasting timer state, and weight history are migrated. Original height/waist measurement records are also retained in a local legacy archive for future support. Verify the imported history before deleting or resetting the old PWA.
+
+## If the data is inside the old Android APK
+
+Capacitor stores WebView data separately from Chrome's normal browser profile. If the old APK is where your records were created, running the exporter in ordinary Chrome will not see those records.
+
+If the old APK exposes its WebView for remote debugging:
+1. Enable Android Developer Options and USB debugging, then connect the phone to a computer.
+2. Open Chrome on the computer at `chrome://inspect/#devices`.
+3. Launch the old M-Fit APK on the phone and look for its WebView under the connected device.
+4. Choose **Inspect** for that WebView, open its Console, and run the same read-only exporter script there.
+5. Confirm the downloaded JSON file contains your activity and daily records before proceeding.
+
+If the old WebView does not appear in `chrome://inspect`, the old app's private WebView storage cannot be reached by the browser exporter. Do not uninstall or clear the old APK in that situation; its local data needs a separate on-device extraction path.

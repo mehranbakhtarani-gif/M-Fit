@@ -184,6 +184,77 @@ object NativeBackupManager {
             editor.apply()
         }
 
+        var restoredMeasurements = 0
+        val measurementArray = appData.optJSONArray("bodyMeasurements") ?: JSONArray()
+        val measurementPrefs = context.getSharedPreferences("mfit_profile_measurements", Context.MODE_PRIVATE)
+        val existingHistory = runCatching {
+            JSONArray(measurementPrefs.getString("weight_history", "[]") ?: "[]")
+        }.getOrDefault(JSONArray())
+        val mergedMeasurements = linkedMapOf<String, JSONObject>()
+        for (i in 0 until existingHistory.length()) {
+            val item = existingHistory.optJSONObject(i) ?: continue
+            val id = item.optString("id")
+            if (id.isNotBlank()) mergedMeasurements[id] = item
+        }
+        var latestImportedWeight: Pair<Double, Long>? = null
+        for (i in 0 until measurementArray.length()) {
+            val item = measurementArray.optJSONObject(i) ?: continue
+            val weight = item.optDouble("weight", Double.NaN)
+            val date = item.optString("date")
+            val recordedAt = runCatching {
+                java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(date)?.time
+            }.getOrNull() ?: continue
+            if (!weight.isFinite() || weight !in 20.0..250.0) continue
+            val id = "pwa-measure-$date-$i"
+            if (!mergedMeasurements.containsKey(id)) {
+                mergedMeasurements[id] = JSONObject()
+                    .put("id", id)
+                    .put("weightKg", weight)
+                    .put("recordedAtMillis", recordedAt)
+                restoredMeasurements++
+            }
+            if (latestImportedWeight == null || recordedAt > latestImportedWeight!!.second) {
+                latestImportedWeight = weight to recordedAt
+            }
+        }
+        if (restoredMeasurements > 0) {
+            val mergedArray = JSONArray()
+            mergedMeasurements.values
+                .sortedBy { it.optLong("recordedAtMillis", 0L) }
+                .takeLast(500)
+                .forEach { mergedArray.put(it) }
+            measurementPrefs.edit()
+                .putString("weight_history", mergedArray.toString())
+                .apply()
+        }
+        val profilePrefs = context.getSharedPreferences("mfit_profile", Context.MODE_PRIVATE)
+        if (!profilePrefs.contains("body_weight_kg") && latestImportedWeight != null) {
+            profilePrefs.edit()
+                .putFloat("body_weight_kg", latestImportedWeight!!.first.toFloat())
+                .apply()
+        }
+        if (measurementArray.length() > 0) {
+            context.getSharedPreferences("mfit_legacy_body_measurements", Context.MODE_PRIVATE)
+                .edit()
+                .putString("records", measurementArray.toString())
+                .apply()
+        }
+
+        var restoredFasting = 0
+        val fasting = root.optJSONObject("fastingState")
+        if (fasting != null && fasting.optBoolean("fasting", false)) {
+            val startedAt = fasting.optLong("start", 0L)
+            val targetHours = fasting.optInt("target", 16)
+            val fastingPrefs = context.getSharedPreferences("mfit_fasting", Context.MODE_PRIVATE)
+            if (startedAt > 0L && targetHours in 1..48 && !fastingPrefs.contains("started_at")) {
+                fastingPrefs.edit()
+                    .putLong("started_at", startedAt)
+                    .putLong("ends_at", startedAt + targetHours * 60L * 60L * 1000L)
+                    .apply()
+                restoredFasting = 1
+            }
+        }
+
         val dao = ActivityDatabase.get(context).activityDao()
         var restoredSessions = 0
         var restoredPoints = 0
@@ -283,7 +354,7 @@ object NativeBackupManager {
             }
         }
 
-        return "$restoredDailyValues مورد داده روزانه، $restoredSessions فعالیت و $restoredPoints نقطه مسیر از PWA وارد شد. داده‌های موجود بازنویسی نشدند."
+        return "$restoredDailyValues مورد داده روزانه، $restoredMeasurements اندازه‌گیری وزن، $restoredFasting تایمر روزه‌داری، $restoredSessions فعالیت و $restoredPoints نقطه مسیر از PWA وارد شد. داده‌های موجود بازنویسی نشدند."
     }
 
 }

@@ -6,6 +6,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 const MfitMotion = registerPlugin('MfitMotion');
 const MfitLiveUpdate = registerPlugin('MfitLiveUpdate');
+const MfitShare = registerPlugin('MfitShare');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
@@ -133,4 +134,17 @@ window.MfitLiveUpdate = {
   async start(data){ if(!isNative)return {shown:false}; return MfitLiveUpdate.start(data); },
   async update(data){ if(isNative)return MfitLiveUpdate.update(data); },
   async stop(){ if(isNative)return MfitLiveUpdate.stop(); }
+};
+
+
+window.MfitNativeShare = {
+  isNative,
+  async saveImage(data, fileName = 'mfit-route.png') {
+    if (!isNative) throw new Error('Native Android storage is unavailable');
+    return MfitShare.saveImage({ data, fileName });
+  },
+  async shareImage(data, fileName = 'mfit-route.png') {
+    if (!isNative) throw new Error('Native Android sharing is unavailable');
+    return MfitShare.shareImage({ data, fileName });
+  }
 };

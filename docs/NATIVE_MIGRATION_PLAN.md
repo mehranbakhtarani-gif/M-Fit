@@ -160,3 +160,13 @@ Notes and remaining work:
 - If the service is unexpectedly destroyed while a session is still running or paused, the stream is cleared rather than leaving stale live metrics on screen.
 - Room remains the durable source for session history and track points; the StateFlow is only a live, process-local presentation stream.
 - Validation still required: run the newest CI build/tests, then test on a physical Android device for permission denial, pause/resume, screen-off tracking, service termination, and final history refresh.
+
+
+## Profile body mass and activity calories
+
+- Body mass is stored locally in Android SharedPreferences under the profile namespace; it is not sent to a server.
+- Profile accepts 20–250 kg and validates input before saving.
+- A newly started activity reads the saved body mass and passes it to the MET-based calorie estimator.
+- The estimator uses `MET × body mass (kg) × elapsed hours`; this is an approximation, not a measured energy expenditure.
+- When no valid body mass exists, calories remain unavailable (zero internally) and the UI explicitly asks the user to enter weight instead of silently assuming 70 kg.
+- Changing profile weight affects the next activity; an activity already in progress retains the weight loaded at its start.

@@ -77,7 +77,7 @@ console.log('Generated native Android step detector plugin.');
 
 
 /* Generate Android 16 Live Update support for workout sessions. */
-const livePlugin = String.raw\`package com.mfit.wellness.plugins;
+const livePlugin = String.raw`package com.mfit.wellness.plugins;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -160,21 +160,21 @@ public class MfitLiveUpdatePlugin extends Plugin {
     if (Build.VERSION.SDK_INT >= 36) r.put("canPostPromoted", nm.canPostPromotedNotifications());
     call.resolve(r);
   }
-}\`;
+}`;
 await writeFile(pluginDir + '/MfitLiveUpdatePlugin.java', livePlugin);
 try { await (await import('node:fs/promises')).unlink(pluginDir + '/MfitIslandPlugin.java'); } catch (error) {}
 const manifestPath = 'android/app/src/main/AndroidManifest.xml';
 let manifest = await readFile(manifestPath, 'utf8');
-manifest = manifest.replace(/\\s*<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"\\s*\\/>/g, '');
+manifest = manifest.replace(/\s*<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"\\s*\\/>/g, '');
 for (const permission of ['android.permission.POST_NOTIFICATIONS', 'android.permission.POST_PROMOTED_NOTIFICATIONS']) {
-  if (!manifest.includes(permission)) manifest = manifest.replace(/(<manifest\\b[^>]*>)/, '$1\\n    <uses-permission android:name="' + permission + '" />');
+  if (!manifest.includes(permission)) manifest = manifest.replace(/(<manifest\b[^>]*>)/, '$1\n    <uses-permission android:name="' + permission + '" />');
 }
 await writeFile(manifestPath, manifest);
 if (!mainSource.includes('MfitLiveUpdatePlugin')) {
-  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\\nimport com.mfit.wellness.plugins.MfitLiveUpdatePlugin;');
-  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\\n        registerPlugin(MfitLiveUpdatePlugin.class);');
+  mainSource = mainSource.replace('import com.mfit.wellness.plugins.MfitMotionPlugin;', 'import com.mfit.wellness.plugins.MfitMotionPlugin;\nimport com.mfit.wellness.plugins.MfitLiveUpdatePlugin;');
+  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitLiveUpdatePlugin.class);');
 }
-mainSource = mainSource.replace(/import com\\.mfit\\.wellness\\.plugins\\.MfitIslandPlugin;\\s*/g, '');
-mainSource = mainSource.replace(/\\s*registerPlugin\\(MfitIslandPlugin\\.class\\);/g, '');
+mainSource = mainSource.replace(/import com\.mfit\\.wellness\\.plugins\\.MfitIslandPlugin;\s*/g, '');
+mainSource = mainSource.replace(/\s*registerPlugin\\(MfitIslandPlugin\\.class\\);/g, '');
 await writeFile(mainPath, mainSource);
 console.log('Generated native Live Update integration and removed overlay island.');

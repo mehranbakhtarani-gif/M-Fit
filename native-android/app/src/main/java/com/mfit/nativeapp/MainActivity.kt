@@ -657,46 +657,115 @@ private fun ProfileScreen(
     onSaveWeight: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Text("پروفایل", style = MaterialTheme.typography.headlineMedium)
-        Text("پشتیبان‌گیری و انتقال اطلاعات", style = MaterialTheme.typography.titleLarge)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = onExportBackup) { Text("خروجی اطلاعات") }
-            Button(onClick = onImportBackup) { Text("بازیابی اطلاعات") }
-        }
-        Text("بازیابی به‌صورت ادغام انجام می‌شود؛ اطلاعات موجود بازنویسی یا حذف نمی‌شوند.", style = MaterialTheme.typography.bodySmall)
-        Text("وزن بدن برای تخمین کالری فعالیت‌ها استفاده می‌شود.")
-        TextField(
-            value = weightInput,
-            onValueChange = onWeightInputChange,
+        Card(
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("وزن (کیلوگرم)") },
-            singleLine = true
-        )
-        Button(onClick = onSaveWeight, enabled = weightInput.isNotBlank()) {
-            Text("ذخیره وزن")
+            shape = RoundedCornerShape(30.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().background(
+                    Brush.linearGradient(listOf(Color(0xDFFFFFFF), Color(0x99D8F4E9), Color(0x88D8EFF8)))
+                ).padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier.size(66.dp),
+                    shape = RoundedCornerShape(23.dp),
+                    color = Color(0xDFFFFFFF),
+                    shadowElevation = 4.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("M", fontSize = 26.sp, fontWeight = FontWeight.Black, color = MfitPalette.green)
+                    }
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("پروفایل من", fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = MfitPalette.ink)
+                    Text("اطلاعات بدن و پیشرفت سلامتی", fontSize = 11.sp, color = MfitPalette.muted)
+                    Text(savedWeightKg?.let { "وزن فعلی: ${formatWeight(it)} کیلوگرم" } ?: "هنوز وزنی ثبت نکرده‌ای", fontSize = 10.sp, color = MfitPalette.green)
+                }
+            }
         }
-        Text(
-            savedWeightKg?.let { "وزن ذخیره‌شده: ${formatWeight(it)} کیلوگرم" }
-                ?: "هنوز وزنی ثبت نشده است؛ کالری فعالیت‌ها تا ثبت وزن محاسبه نمی‌شود.",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(23.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("پشتیبان‌گیری و انتقال اطلاعات", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
+                Text("از اطلاعاتت نسخه پشتیبان بگیر یا نسخه قبلی را بازیابی کن.", style = MaterialTheme.typography.bodySmall, color = MfitPalette.muted)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onExportBackup, modifier = Modifier.weight(1f)) { Text("خروجی اطلاعات") }
+                    androidx.compose.material3.OutlinedButton(onClick = onImportBackup, modifier = Modifier.weight(1f)) { Text("بازیابی اطلاعات") }
+                }
+                Text("بازیابی به‌صورت ادغام انجام می‌شود؛ اطلاعات موجود بازنویسی یا حذف نمی‌شوند.", style = MaterialTheme.typography.bodySmall, color = MfitPalette.muted)
+            }
+        }
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(23.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass)
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Text("اندازه‌گیری بدن", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
+                Text("وزن بدن برای تخمین کالری فعالیت‌ها استفاده می‌شود.", style = MaterialTheme.typography.bodySmall, color = MfitPalette.muted)
+                TextField(
+                    value = weightInput,
+                    onValueChange = onWeightInputChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("وزن (کیلوگرم)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(15.dp)
+                )
+                Button(onClick = onSaveWeight, enabled = weightInput.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                    Text("ذخیره وزن")
+                }
+                Text(
+                    savedWeightKg?.let { "وزن ذخیره‌شده: ${formatWeight(it)} کیلوگرم" }
+                        ?: "هنوز وزنی ثبت نشده است؛ کالری فعالیت‌ها تا ثبت وزن محاسبه نمی‌شود.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MfitPalette.muted
+                )
+            }
+        }
         if (weightHistory.isNotEmpty()) {
-            Text("روند تغییرات وزن", style = MaterialTheme.typography.titleLarge)
-            val minWeight = weightHistory.minOf { it.weightKg }.toFloat()
-            val maxWeight = weightHistory.maxOf { it.weightKg }.toFloat()
-            weightHistory.takeLast(12).forEach { measurement ->
-                val ratio = if (maxWeight <= minWeight) 1f else
-                    ((measurement.weightKg.toFloat() - minWeight) / (maxWeight - minWeight)).coerceIn(0.05f, 1f)
-                Text("${java.text.SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(measurement.recordedAtMillis))} · ${formatWeight(measurement.weightKg)} kg")
-                androidx.compose.material3.LinearProgressIndicator(progress = { ratio }, modifier = Modifier.fillMaxWidth())
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(23.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("روند تغییرات وزن", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
+                    val minWeight = weightHistory.minOf { it.weightKg }.toFloat()
+                    val maxWeight = weightHistory.maxOf { it.weightKg }.toFloat()
+                    weightHistory.takeLast(12).forEach { measurement ->
+                        val ratio = if (maxWeight <= minWeight) 1f else
+                            ((measurement.weightKg.toFloat() - minWeight) / (maxWeight - minWeight)).coerceIn(0.05f, 1f)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(java.text.SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(measurement.recordedAtMillis)), style = MaterialTheme.typography.labelSmall, color = MfitPalette.muted)
+                            Text("${formatWeight(measurement.weightKg)} kg", style = MaterialTheme.typography.labelMedium, color = MfitPalette.ink)
+                        }
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { ratio },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MfitPalette.green,
+                            trackColor = Color(0xFFDCEEE8)
+                        )
+                    }
+                }
             }
         }
         Text(
             "وزن جدید از فعالیت بعدی در محاسبه کالری استفاده می‌شود. اطلاعات پروفایل فقط روی همین دستگاه ذخیره می‌شود.",
-            style = MaterialTheme.typography.bodySmall
+            style = MaterialTheme.typography.labelSmall,
+            color = MfitPalette.muted,
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
     }
 }

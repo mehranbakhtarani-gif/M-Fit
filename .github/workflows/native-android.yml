@@ -11,9 +11,18 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: mfit-native-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      MFIT_RELEASE_STORE_PASSWORD: ${{ secrets.MFIT_RELEASE_STORE_PASSWORD }}
+      MFIT_RELEASE_KEY_ALIAS: ${{ secrets.MFIT_RELEASE_KEY_ALIAS }}
+      MFIT_RELEASE_KEY_PASSWORD: ${{ secrets.MFIT_RELEASE_KEY_PASSWORD }}
+      MFIT_RELEASE_KEYSTORE_BASE64: ${{ secrets.MFIT_RELEASE_KEYSTORE_BASE64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,3 +50,25 @@ jobs:
           path: native-android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+
+      - name: Prepare persistent release keystore
+        if: ${{ env.MFIT_RELEASE_KEYSTORE_BASE64 != '' && env.MFIT_RELEASE_STORE_PASSWORD != '' && env.MFIT_RELEASE_KEY_ALIAS != '' && env.MFIT_RELEASE_KEY_PASSWORD != '' }}
+        run: |
+          echo "$MFIT_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/mfit-release.jks"
+          echo "MFIT_RELEASE_STORE_FILE=$RUNNER_TEMP/mfit-release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        if: ${{ env.MFIT_RELEASE_KEYSTORE_BASE64 != '' && env.MFIT_RELEASE_STORE_PASSWORD != '' && env.MFIT_RELEASE_KEY_ALIAS != '' && env.MFIT_RELEASE_KEY_PASSWORD != '' }}
+        working-directory: native-android
+        env:
+          MFIT_RELEASE_STORE_FILE: ${{ runner.temp }}/mfit-release.jks
+        run: gradle assembleRelease --stacktrace
+
+      - name: Upload signed release APK
+        if: ${{ env.MFIT_RELEASE_KEYSTORE_BASE64 != '' && env.MFIT_RELEASE_STORE_PASSWORD != '' && env.MFIT_RELEASE_KEY_ALIAS != '' && env.MFIT_RELEASE_KEY_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: MFit-Native-Release
+          path: native-android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

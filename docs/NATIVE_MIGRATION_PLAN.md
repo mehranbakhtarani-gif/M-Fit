@@ -83,3 +83,20 @@ The safest native path is a separate Kotlin Android app alongside the existing P
 
 ## First implementation gate
 Do not begin porting screens until the code-level audit and legacy-data contract are complete. First native milestone should be a clean Kotlin/Compose app shell with Room and automated tests, built on a separate branch, while the current PWA/Capacitor app remains intact.
+
+## Implemented increment — activity domain core
+
+The first Native activity-domain increment is now present under
+`native-android/app/src/main/java/com/mfit/nativeapp/core/activity/`:
+
+- `ActivityModels.kt`: activity types, session states, GPS fixes, route points and snapshots.
+- `GeoMath.kt`: Haversine distance and a conservative route-point filter. Invalid coordinates, invalid/poor accuracy, out-of-order timestamps, sub-2m jitter and implausible jumps are rejected. Rejected points do not increase route distance.
+- `ActivitySessionEngine.kt`: start/pause/resume/finish transitions, elapsed-time accounting that excludes paused intervals, accepted route accumulation, smoothed recent speed and a provisional MET calorie estimate (currently assumes 70 kg; must be connected to profile weight before UI release).
+- `app/src/test/.../ActivitySessionEngineTest.kt`: JUnit coverage for distance, poor accuracy, jitter, out-of-order fixes, implausible jumps, pause/resume timing, distance accumulation and invalid transitions.
+- Added JUnit 4.13.2 to the app module test dependencies.
+
+Important limitations:
+- These are pure domain classes, not yet connected to Android location APIs, a foreground service, Room persistence or Compose screens.
+- The 25m accuracy / 2m displacement / 35m/s plausibility defaults are initial conservative parameters and must be validated against real walking, running and cycling sessions on the target phone.
+- Calorie output is provisional until profile body mass and activity-specific calibration are wired in.
+- CI workflow exists, but no workflow run/build result has been observed yet; do not treat tests as passed until GitHub Actions reports success.

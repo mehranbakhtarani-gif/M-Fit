@@ -106,7 +106,7 @@ object NativeBackupManager {
             if (id.isBlank() || started <= 0L) continue
             val originalStatus = item.optString("status")
             val status = if (originalStatus == "RUNNING" || originalStatus == "PAUSED") "INTERRUPTED" else originalStatus
-            dao.restoreSessionIfMissing(
+            val insertedSession = dao.restoreSessionIfMissing(
                 ActivitySessionEntity(
                     id = id,
                     activityType = item.optString("activityType", "WALK"),
@@ -118,7 +118,7 @@ object NativeBackupManager {
                     calories = item.optInt("calories", 0).coerceAtLeast(0)
                 )
             )
-            restoredSessions++
+            if (insertedSession != -1L) restoredSessions++
             val points = item.optJSONArray("points") ?: JSONArray()
             for (pointIndex in 0 until points.length()) {
                 val point = points.optJSONObject(pointIndex) ?: continue
@@ -126,7 +126,7 @@ object NativeBackupManager {
                 val lon = point.optDouble("longitude", Double.NaN)
                 val timestamp = point.optLong("timestampMillis", 0L)
                 if (!lat.isFinite() || !lon.isFinite() || lat !in -90.0..90.0 || lon !in -180.0..180.0 || timestamp <= 0L) continue
-                dao.insertPoint(
+                val insertedPoint = dao.insertPoint(
                     ActivityTrackPointEntity(
                         sessionId = id,
                         latitude = lat,
@@ -136,7 +136,7 @@ object NativeBackupManager {
                         segmentDistanceMeters = point.optDouble("segmentDistanceMeters", 0.0).coerceAtLeast(0.0)
                     )
                 )
-                restoredPoints++
+                if (insertedPoint != -1L) restoredPoints++
             }
         }
         return "$restoredPreferenceValues تنظیم، $restoredSessions فعالیت و $restoredPoints نقطه مسیر بازیابی شد. داده‌های موجود بازنویسی نشدند."

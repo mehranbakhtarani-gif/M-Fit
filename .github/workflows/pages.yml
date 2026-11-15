@@ -78,3 +78,5 @@ jobs:
 # Redeploy the latest M-FIT application source from mfit-complete-fixes.
 
 # Publish GPS route filtering fix and refresh PWA shell cache.
+
+# Publish improved initial GPS fix using the best repeated location sample.

@@ -346,7 +346,7 @@ function setMapStyle(style){
  else $('mapNote').textContent='OpenStreetMap · GPS route tracking ready';
  if(menu){menu.querySelectorAll('[data-map-style]').forEach(button=>button.classList.toggle('active',button.dataset.mapStyle===style))}
  if(toggle)toggle.textContent='MAP LAYERS⌄';
- data.mapStyle=style;try{localStorage.setItem(mapStyleStorageKey,style)}catch(error){}save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),180);
+ data.mapStyle=style;try{storageSet(mapStyleStorageKey,style)}catch(error){}save();setTimeout(()=>liveMap&&liveMap.invalidateSize(),180);
 }
 function initLiveMap(){
  if(liveMap)return;
@@ -366,7 +366,7 @@ function initLiveMap(){
   menu.querySelectorAll('[data-map-style]').forEach(button=>button.addEventListener('click',()=>{setMapStyle(button.dataset.mapStyle);menu.hidden=true;toggle.setAttribute('aria-expanded','false')}));
   document.addEventListener('click',event=>{if(!event.target.closest('.map-style')&&!event.target.closest('.map-layer-menu')){menu.hidden=true;toggle.setAttribute('aria-expanded','false')}});
  }
- let rememberedStyle='';try{rememberedStyle=localStorage.getItem(mapStyleStorageKey)||''}catch(error){}const candidate=rememberedStyle||data.mapStyle||'street';const savedStyle=['street','satellite','ofm-liberty','ofm-positron','ofm-bright','ofm-dark','ofm-fiord'].includes(candidate)?candidate:'street';
+ let rememberedStyle='';try{rememberedStyle=storageGet(mapStyleStorageKey)||''}catch(error){}const candidate=rememberedStyle||data.mapStyle||'street';const savedStyle=['street','satellite','ofm-liberty','ofm-positron','ofm-bright','ofm-dark','ofm-fiord'].includes(candidate)?candidate:'street';
  setMapStyle(savedStyle);
  setTimeout(()=>liveMap&&liveMap.invalidateSize(),250);
 }
@@ -394,7 +394,7 @@ async function createMfitDataBackup(){
   if(activityStoreInitPromise)await activityStoreInitPromise;
   save();
   const activities=activityStoreReady?await activityDbRequest('readonly','getAll'):(Array.isArray(data.history)?data.history:[]);
-  const storage=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k!==null)storage.push([k,localStorage.getItem(k)])}
+  const storage=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k!==null)storage.push([k,storageGet(k)])}
   const payload={format:'mfit-data-backup',version:1,createdAt:new Date().toISOString(),appId:'com.mfit.wellness',localStorage:storage,activities};
   const json=JSON.stringify(payload),encoded=btoa(unescape(encodeURIComponent(json)));
   const fileName='M-FIT-backup-'+new Date().toISOString().replace(/[:.]/g,'-')+'.json';
@@ -410,7 +410,7 @@ async function restoreMfitDataBackup(file){
   if(parsed?.format!=='mfit-data-backup'||parsed?.version!==1||!Array.isArray(parsed.localStorage)||!Array.isArray(parsed.activities))throw new Error('This is not a valid M-FIT backup file.');
   if(!confirm('Restore this M-FIT backup? Existing activity history will be kept and combined with the backup. Matching backup settings and profile data will be restored.'))return;
   if(activityStoreInitPromise)await activityStoreInitPromise;
-  for(const entry of parsed.localStorage){if(Array.isArray(entry)&&typeof entry[0]==='string'&&typeof entry[1]==='string')localStorage.setItem(entry[0],entry[1])}
+  for(const entry of parsed.localStorage){if(Array.isArray(entry)&&typeof entry[0]==='string'&&typeof entry[1]==='string')storageSet(entry[0],entry[1])}
   if(!activityDb){activityDb=await openActivityDatabase();activityStoreReady=true}
   const current=await activityDbRequest('readonly','getAll'),merged=new Map();
   current.forEach(item=>{if(item?.id)merged.set(item.id,item)});
@@ -524,12 +524,12 @@ async function enableMotion(fromUserGesture=false){
   if(!('DeviceMotionEvent' in window)){ $('motionStatus').textContent='This browser does not expose a motion sensor';return}
   if(motionOn)return;
   const needsGesture=typeof DeviceMotionEvent.requestPermission==='function';
-  const alreadyGranted=localStorage.getItem(motionGrantKey)==='granted';
+  const alreadyGranted=storageGet(motionGrantKey)==='granted';
   if(needsGesture&&!alreadyGranted){
    if(!fromUserGesture){$('motionStatus').textContent='Tap START ACTIVITY once to grant motion permission';return}
    const permission=await DeviceMotionEvent.requestPermission();
    if(permission!=='granted'){ $('motionStatus').textContent='Motion permission was not granted';return}
-   try{localStorage.setItem(motionGrantKey,'granted')}catch(storageError){}
+   try{storageSet(motionGrantKey,'granted')}catch(storageError){}
   }
   motionOn=true;peak=0;wasRising=false;gravityReady=false;motionSmooth=0;motionBaseline=0;previousDynamic=0;lastPeakAt=0;stepPeakTimes=[];
   window.addEventListener('devicemotion',onMotion,{passive:true});
@@ -732,7 +732,7 @@ function coachSpeak(message){if(!voiceCoachEnabled||!message)return false;const 
 function coachClock(sec){const m=Math.floor(sec/60),h=Math.floor(m/60);return h?h+' ساعت و '+(m%60)+' دقیقه':m+' دقیقه'}
 function coachStart(){nextCoachKm=Math.floor(distance)+1;lastCoachTimeMark=Math.floor((elapsed+(active?(Date.now()-startedAt)/1000:0))/300);lastCoachReportedSpeed=distance>0?distance/Math.max(1,(elapsed/3600)):0;if(voiceCoachEnabled){if(!(window.MfitNativeTTS&&window.MfitNativeTTS.isNative)&&!('speechSynthesis'in window)){$('voiceCoachStatus').textContent='Speech is not supported on this device';return}if('speechSynthesis'in window)window.speechSynthesis.getVoices();coachSpeak('فعالیت شروع شد. من همراهتم. هر یک کیلومتر گزارش می‌دم. حرکت خوبی داشته باشی.')}}
 function coachProgress(previousDistance,currentDistance,seconds){if(!voiceCoachEnabled)return;let spoke=false;if(currentDistance>=nextCoachKm){const avg=seconds>0?currentDistance/(seconds/3600):0;coachSpeak('یک کیلومتر کامل شد. مسافت کل '+currentDistance.toFixed(1)+' کیلومتر. سرعت متوسط '+avg.toFixed(1)+' کیلومتر بر ساعت. '+'عالیه، همین طور ادامه بده.');nextCoachKm=Math.floor(currentDistance)+1;lastCoachReportedSpeed=avg;spoke=true}const mark=Math.floor(seconds/300);if(!spoke&&mark>lastCoachTimeMark&&seconds>=300){const avg=seconds>0?currentDistance/(seconds/3600):0;coachSpeak('زمان فعالیتت '+coachClock(seconds)+' است. مسافت طی شده '+currentDistance.toFixed(1)+' کیلومتر.'+' سرعت متوسط '+avg.toFixed(1)+' کیلومتر بر ساعت.');lastCoachTimeMark=mark;spoke=true}if(!spoke&&seconds>=120){const avg=seconds>0?currentDistance/(seconds/3600):0;if(lastCoachReportedSpeed>0&&avg>0&&Math.abs(avg-lastCoachReportedSpeed)/lastCoachReportedSpeed>.25){coachSpeak(avg>lastCoachReportedSpeed?'سرعتت بیشتر شده.':'سرعتت کمتر شده. با ریتم راحت خودت ادامه بده.');lastCoachReportedSpeed=avg}}}
-function coachApplyVolume(value){coachVolume=Math.max(0,Math.min(1,Number(value)/100));window.MfitVoiceVolume=coachVolume;try{localStorage.setItem("mfitCoachVolume",String(Math.round(coachVolume*100)))}catch(e){}const slider=$("voiceCoachVolume"),out=$("voiceCoachVolumeValue");if(slider&&out){slider.value=String(Math.round(coachVolume*100));out.textContent=Math.round(coachVolume*100)+"%";slider.style.background="linear-gradient(90deg,#54b995 0%,#8ed9bd "+(coachVolume*100)+"%,#dcebe5 "+(coachVolume*100)+"%)"}if(window.MfitWasmTTS&&window.MfitWasmTTS.setVolume)window.MfitWasmTTS.setVolume(coachVolume)}
+function coachApplyVolume(value){coachVolume=Math.max(0,Math.min(1,Number(value)/100));window.MfitVoiceVolume=coachVolume;try{storageSet("mfitCoachVolume",String(Math.round(coachVolume*100)))}catch(e){}const slider=$("voiceCoachVolume"),out=$("voiceCoachVolumeValue");if(slider&&out){slider.value=String(Math.round(coachVolume*100));out.textContent=Math.round(coachVolume*100)+"%";slider.style.background="linear-gradient(90deg,#54b995 0%,#8ed9bd "+(coachVolume*100)+"%,#dcebe5 "+(coachVolume*100)+"%)"}if(window.MfitWasmTTS&&window.MfitWasmTTS.setVolume)window.MfitWasmTTS.setVolume(coachVolume)}
 function coachSetStatus(){const b=$('voiceCoachToggle');if(!b)return;b.textContent=voiceCoachEnabled?'VOICE ON':'VOICE OFF';b.classList.toggle('off',!voiceCoachEnabled);$('voiceCoachStatus').textContent=voiceCoachEnabled?'Ready to join your activity':'Voice coach is off'}
 $('voiceCoachToggle').onclick=async()=>{
   voiceCoachEnabled=!voiceCoachEnabled;
@@ -779,8 +779,8 @@ if(window.MfitNativeTTS&&window.MfitNativeTTS.isNative){
   }).catch(()=>{$('voiceCoachStatus').textContent='بررسی موتور گفتار اندروید انجام نشد.'});
 }
 
-function saveActiveSessionDraft(){try{if(!activitySessionStarted&&!active&&!elapsed&&!coords.length){localStorage.removeItem(activityDraftKey);return}const elapsedNow=Math.max(0,elapsed+(active&&startedAt?(Date.now()-startedAt)/1000:0));localStorage.setItem(activityDraftKey,JSON.stringify({version:1,mode,elapsed:elapsedNow,distance,coords:coords.slice(-5000),savedAt:Date.now(),wasActive:active}))}catch(error){console.warn('Mfit session checkpoint failed:',error)}}
-function clearActiveSessionDraft(){try{localStorage.removeItem(activityDraftKey)}catch(error){}}
+function saveActiveSessionDraft(){try{if(!activitySessionStarted&&!active&&!elapsed&&!coords.length){storageRemove(activityDraftKey);return}const elapsedNow=Math.max(0,elapsed+(active&&startedAt?(Date.now()-startedAt)/1000:0));storageSet(activityDraftKey,JSON.stringify({version:1,mode,elapsed:elapsedNow,distance,coords:coords.slice(-5000),savedAt:Date.now(),wasActive:active}))}catch(error){console.warn('Mfit session checkpoint failed:',error)}}
+function clearActiveSessionDraft(){try{storageRemove(activityDraftKey)}catch(error){}}
 
 function mfitConfirm(message,{title='Confirm Action',confirmText='Continue',cancelText='Cancel',icon='✦'}={}){
  return new Promise(resolve=>{
@@ -800,7 +800,7 @@ function mfitConfirm(message,{title='Confirm Action',confirmText='Continue',canc
  });
 }
 
-async function restoreActivityDraft(){let draft;try{draft=JSON.parse(localStorage.getItem(activityDraftKey)||'null')}catch(error){clearActiveSessionDraft();return}if(!draft||draft.version!==1||!Array.isArray(draft.coords)){clearActiveSessionDraft();return}const age=Date.now()-Number(draft.savedAt||0);if(age>7*24*60*60*1000||age<0){clearActiveSessionDraft();return}const count=draft.coords.length;if(!count&&!Number(draft.elapsed)){clearActiveSessionDraft();return}if(!(await mfitConfirm('An unfinished activity was found. Would you like to restore it? It will reopen in a paused state so you can restart GPS tracking.',{title:'Restore Activity',confirmText:'Restore Activity',cancelText:'Not Now',icon:'↻'}))){clearActiveSessionDraft();return}mode=['Walk','Run','Ride'].includes(draft.mode)?draft.mode:'Walk';elapsed=Math.max(0,Number(draft.elapsed)||0);distance=Math.max(0,Number(draft.distance)||0);coords=draft.coords.filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).slice(-5000);active=false;activitySessionStarted=true;startedAt=0;initLiveMap();if(liveMap&&coords.length){const points=coords.map(p=>[p.lat,p.lon]);if(routeLayer)routeLayer.setLatLngs(points);else routeLayer=L.polyline(points,{color:'#39ae8a',weight:5,opacity:.9}).addTo(liveMap);const last=points[points.length-1];currentMarker=L.circleMarker(last,{radius:8,color:'#fff',weight:3,fillColor:'#24ad82',fillOpacity:1}).addTo(liveMap);liveMap.setView(last,16)}$('mapNote').textContent='فعالیت قبلی بازیابی شد؛ برای ادامه START ACTIVITY را بزن';$('gpsStatus').textContent='SESSION RESTORED · GPS PAUSED';gpsSignal('paused','Recovered session');renderActivity();toast('فعالیت ناتمام بازیابی شد')}
+async function restoreActivityDraft(){let draft;try{draft=JSON.parse(storageGet(activityDraftKey)||'null')}catch(error){clearActiveSessionDraft();return}if(!draft||draft.version!==1||!Array.isArray(draft.coords)){clearActiveSessionDraft();return}const age=Date.now()-Number(draft.savedAt||0);if(age>7*24*60*60*1000||age<0){clearActiveSessionDraft();return}const count=draft.coords.length;if(!count&&!Number(draft.elapsed)){clearActiveSessionDraft();return}if(!(await mfitConfirm('An unfinished activity was found. Would you like to restore it? It will reopen in a paused state so you can restart GPS tracking.',{title:'Restore Activity',confirmText:'Restore Activity',cancelText:'Not Now',icon:'↻'}))){clearActiveSessionDraft();return}mode=['Walk','Run','Ride'].includes(draft.mode)?draft.mode:'Walk';elapsed=Math.max(0,Number(draft.elapsed)||0);distance=Math.max(0,Number(draft.distance)||0);coords=draft.coords.filter(p=>Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))).slice(-5000);active=false;activitySessionStarted=true;startedAt=0;initLiveMap();if(liveMap&&coords.length){const points=coords.map(p=>[p.lat,p.lon]);if(routeLayer)routeLayer.setLatLngs(points);else routeLayer=L.polyline(points,{color:'#39ae8a',weight:5,opacity:.9}).addTo(liveMap);const last=points[points.length-1];currentMarker=L.circleMarker(last,{radius:8,color:'#fff',weight:3,fillColor:'#24ad82',fillOpacity:1}).addTo(liveMap);liveMap.setView(last,16)}$('mapNote').textContent='فعالیت قبلی بازیابی شد؛ برای ادامه START ACTIVITY را بزن';$('gpsStatus').textContent='SESSION RESTORED · GPS PAUSED';gpsSignal('paused','Recovered session');renderActivity();toast('فعالیت ناتمام بازیابی شد')}
 function gpsSignal(quality,accuracyText){const el=$('gpsSignal');if(!el)return;el.dataset.quality=quality;$('gpsSignalLabel').textContent=({searching:'GPS SEARCHING',excellent:'GPS EXCELLENT',good:'GPS GOOD',fair:'GPS FAIR',weak:'GPS WEAK',error:'GPS UNAVAILABLE',paused:'GPS PAUSED'})[quality]||'GPS SEARCHING';$('gpsSignalAccuracy').textContent=accuracyText||'Waiting for location'}
 function gpsHandlePosition(pos){if(!active)return;const point=pos.coords||pos,accuracy=Number(point.accuracy);if(!Number.isFinite(accuracy)||accuracy<=0){currentSpeedKmh=0;gpsSpeedSamples=[];lastSpeedSampleAt=0;gpsSignal('weak','Accuracy unavailable');return}const quality=accuracy<=8?'excellent':accuracy<=15?'good':accuracy<=25?'fair':'weak';gpsSignal(quality,'±'+Math.round(accuracy)+' m accuracy');if(accuracy>25){currentSpeedKmh=0;gpsSpeedSamples=[];lastSpeedSampleAt=0;$('gpsStatus').textContent='GPS SIGNAL WEAK';return}let c={lat:point.latitude,lon:point.longitude,time:Number(pos.timestamp||pos.time)||Date.now(),accuracy,elapsedSeconds:Math.max(0,elapsed+(active?(Date.now()-startedAt)/1000:0))};if(!Number.isFinite(c.lat)||!Number.isFinite(c.lon))return;if(coords.length){const prev=coords[coords.length-1],d=hav(prev,c),dt=Math.max(.25,(c.time-prev.time)/1000),maxSpeed=mode==='Walk'?9:mode==='Run'?25:65;if(d>1000||d/dt>maxSpeed){currentSpeedKmh=0;gpsSpeedSamples=[];lastSpeedSampleAt=0;$('gpsStatus').textContent='GPS JUMP IGNORED';return}const minMove=Math.max(3,Math.min(9,accuracy*.35));if(d<minMove){$('gpsStatus').textContent='GPS CONNECTED · FILTERING';return}updateSmoothedSpeed(c,prev);distance+=d/1000}const coachSeconds=elapsed+(active?(Date.now()-startedAt)/1000:0);coachProgress(0,distance,coachSeconds);coords.push(c);$('gpsStatus').textContent='GPS CONNECTED';$('mapBadge').textContent='GPS RECORDING';$('mapNote').textContent='موقعیت واقعی · '+coords.length+' نقطه ثبت شده';if(liveMap){let ll=[c.lat,c.lon];if(routeLayer)routeLayer.addLatLng(ll);if(!currentMarker)currentMarker=L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#24ad82',fillOpacity:1}).addTo(liveMap);else currentMarker.setLatLng(ll);if(coords.length===1)liveMap.setView(ll,16);else liveMap.panTo(ll,{animate:true,duration:.35})}renderActivity();if(active)saveActiveSessionDraft()}
 function gpsHandleError(err){const code=Number(err&&err.code),message=String(err&&err.message||'');const permissionDenied=code===1||/permission|denied/i.test(message),temporary=code===2||code===3||/timeout|temporar|unavailable/i.test(message);currentSpeedKmh=0;gpsSpeedSamples=[];lastSpeedSampleAt=0;if(permissionDenied)gpsStop();$('gpsStatus').textContent=permissionDenied?'GPS PERMISSION REQUIRED':temporary?'GPS SIGNAL SEARCHING':'GPS CONNECTION ISSUE';gpsSignal(permissionDenied?'error':'searching',permissionDenied?'Location permission denied':temporary?'GPS signal temporarily unavailable':'Trying to reconnect GPS');$('mapNote').textContent=permissionDenied?'مجوز مکان‌یابی را فعال کن و دوباره شروع کن':'سیگنال GPS موقتاً قطع شده؛ در صورت امکان ثبت مسیر ادامه پیدا می‌کند';if(permissionDenied)toast('مجوز GPS را از تنظیمات گوشی فعال کن');else if(!temporary)console.warn('M FIT GPS issue:',err)}
@@ -1004,16 +1004,16 @@ if('serviceWorker'in navigator && location.protocol.startsWith('http'))window.ad
  const storeKey='mfit-fast-timer-v2';
  let state={fasting:false,start:0,target:16,completed:false};
  try{
-  const saved=JSON.parse(localStorage.getItem(storeKey)||'null');
+  const saved=JSON.parse(storageGet(storeKey)||'null');
   if(saved&&typeof saved==='object') state={...state,...saved};
   else {
-   const legacy=JSON.parse(localStorage.getItem('mfit-v1')||'{}');
+   const legacy=JSON.parse(storageGet('mfit-v1')||'{}');
    if(legacy.fasting&&Number(legacy.fastStart)>0){
     state.fasting=true;state.start=Number(legacy.fastStart);state.target=Number(legacy.fastTarget)||16;
    }
   }
  }catch(e){}
- const save=()=>{try{localStorage.setItem(storeKey,JSON.stringify(state))}catch(e){}};
+ const save=()=>{try{storageSet(storeKey,JSON.stringify(state))}catch(e){}};
  const fmt=n=>{n=Math.max(0,Math.floor(n));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(v=>String(v).padStart(2,'0')).join(':')};
  function paint(){
   const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTimeInput=$('fastStartTime');

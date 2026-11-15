@@ -33,6 +33,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,6 +44,7 @@ import com.mfit.nativeapp.core.activity.ActivityType
 import com.mfit.nativeapp.data.ActivityDatabase
 import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
+import com.mfit.nativeapp.data.UserProfilePreferences
 import com.mfit.nativeapp.location.ActivityLocationService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -95,6 +97,8 @@ private fun MfitApp() {
     var sessions by remember { mutableStateOf<List<ActivitySessionEntity>>(emptyList()) }
     var selectedSessionId by remember { mutableStateOf<String?>(null) }
     var selectedPoints by remember { mutableStateOf<List<ActivityTrackPointEntity>>(emptyList()) }
+    var savedWeightKg by remember { mutableStateOf(UserProfilePreferences.getWeightKg(context)) }
+    var weightInput by remember { mutableStateOf(savedWeightKg?.let { formatWeight(it) } ?: "") }
 
     LaunchedEffect(Unit) {
         val dao = ActivityDatabase.get(context).activityDao()
@@ -199,7 +203,21 @@ private fun MfitApp() {
         ) {
             when (selectedTab) {
                 MfitTab.Health -> PlaceholderScreen("بخش سلامت — در حال آماده‌سازی نسخه Native")
-                MfitTab.Profile -> PlaceholderScreen("پروفایل — انتقال اطلاعات در مرحله طراحی")
+                MfitTab.Profile -> ProfileScreen(
+                    weightInput = weightInput,
+                    savedWeightKg = savedWeightKg,
+                    onWeightInputChange = { weightInput = it },
+                    onSaveWeight = {
+                        val parsed = weightInput.trim().replace(',', '.').toDoubleOrNull()
+                        if (parsed == null || !UserProfilePreferences.saveWeightKg(context, parsed)) {
+                            Toast.makeText(context, "وزن باید عددی بین ۲۰ تا ۲۵۰ کیلوگرم باشد.", Toast.LENGTH_LONG).show()
+                        } else {
+                            savedWeightKg = parsed
+                            weightInput = formatWeight(parsed)
+                            Toast.makeText(context, "وزن در پروفایل ذخیره شد.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                )
                 MfitTab.Sport -> LazyColumn(
                     modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -217,7 +235,7 @@ private fun MfitApp() {
                                     Text("زمان: ${snapshot.elapsedMillis / 3_600_000L}:%02d:%02d".format((snapshot.elapsedMillis / 60_000L) % 60L, (snapshot.elapsedMillis / 1_000L) % 60L), style = MaterialTheme.typography.titleMedium)
                                     Text("مسافت: %.2f کیلومتر".format(Locale.US, snapshot.distanceMeters / 1000.0))
                                     Text("سرعت فعلی: %.1f km/h  ·  میانگین: %.1f km/h".format(Locale.US, snapshot.currentSpeedMetersPerSecond * 3.6, snapshot.averageSpeedMetersPerSecond * 3.6))
-                                    Text("کالری تخمینی: ${snapshot.calories} kcal")
+                                    Text(if (savedWeightKg == null) "کالری: برای محاسبه، وزن را در پروفایل ثبت کنید." else "کالری تخمینی: ${snapshot.calories} kcal")
                                     Text("نقاط GPS: ${snapshot.points.size}", style = MaterialTheme.typography.labelSmall)
                                 }
                             }
@@ -298,6 +316,46 @@ private fun MfitApp() {
     }
 }
 
+
+@Composable
+private fun ProfileScreen(
+    weightInput: String,
+    savedWeightKg: Double?,
+    onWeightInputChange: (String) -> Unit,
+    onSaveWeight: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("پروفایل", style = MaterialTheme.typography.headlineMedium)
+        Text("وزن بدن برای تخمین کالری فعالیت‌ها استفاده می‌شود.")
+        TextField(
+            value = weightInput,
+            onValueChange = onWeightInputChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("وزن (کیلوگرم)") },
+            singleLine = true
+        )
+        Button(onClick = onSaveWeight, enabled = weightInput.isNotBlank()) {
+            Text("ذخیره وزن")
+        }
+        Text(
+            savedWeightKg?.let { "وزن ذخیره‌شده: ${formatWeight(it)} کیلوگرم" }
+                ?: "هنوز وزنی ثبت نشده است؛ کالری فعالیت‌ها تا ثبت وزن محاسبه نمی‌شود.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Text(
+            "وزن جدید از فعالیت بعدی در محاسبه کالری استفاده می‌شود. اطلاعات پروفایل فقط روی همین دستگاه ذخیره می‌شود.",
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+private fun formatWeight(weightKg: Double): String =
+    if (weightKg % 1.0 == 0.0) weightKg.toInt().toString()
+    else String.format(Locale.US, "%.1f", weightKg)
+
 @Composable
 private fun ActivityHistoryCard(session: ActivitySessionEntity, onClick: () -> Unit) {
     val date = remember(session.startedAtMillis) {
@@ -321,11 +379,11 @@ private fun ActivityHistoryCard(session: ActivitySessionEntity, onClick: () -> U
             Text("$type · $date", style = MaterialTheme.typography.titleSmall)
             Text(status, style = MaterialTheme.typography.bodySmall)
             Text(
-                "%.2f km  ·  %d دقیقه  ·  %d kcal".format(
+                "%.2f km  ·  %d دقیقه  ·  %s".format(
                     Locale.US,
                     session.distanceMeters / 1000.0,
                     session.elapsedMillis / 60_000L,
-                    session.calories
+                    if (session.calories > 0) "${session.calories} kcal" else "کالری ثبت نشده"
                 ),
                 style = MaterialTheme.typography.bodyMedium
             )

@@ -65,3 +65,5 @@ jobs:
 # Publish resilient local storage, daily rollover, and wake-up step sensor improvements.
 
 # Publish native haptics and the service-worker cache isolation fix.
+
+# Publish native fasting-notification parity updates for the shared PWA.

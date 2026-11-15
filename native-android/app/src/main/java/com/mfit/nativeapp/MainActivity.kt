@@ -15,6 +15,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -219,26 +223,65 @@ private fun MfitApp() {
     }
 
     Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MfitPalette.navGlass,
-                contentColor = MfitPalette.ink,
-                tonalElevation = 0.dp,
-                windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+        containerColor = Color.Transparent,
+        topBar = {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 14.dp, bottom = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                MfitTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        icon = {
-                            when (tab) {
-                                MfitTab.Health -> androidx.compose.material3.Icon(Icons.Default.Favorite, null)
-                                MfitTab.Sport -> androidx.compose.material3.Icon(Icons.Default.DirectionsRun, null)
-                                MfitTab.Profile -> androidx.compose.material3.Icon(Icons.Default.Person, null)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("M", fontSize = 17.sp, fontWeight = FontWeight.Black, color = MfitPalette.ink, letterSpacing = 2.sp)
+                        Text(" FIT", fontSize = 17.sp, fontWeight = FontWeight.Black, color = MfitPalette.green, letterSpacing = 2.sp)
+                    }
+                    Text(SimpleDateFormat("EEEE، d MMMM", Locale("fa")).format(Date()), fontSize = 10.sp, color = MfitPalette.muted)
+                }
+                Surface(
+                    modifier = Modifier.size(40.dp).clickable { selectedTab = MfitTab.Profile },
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xFFDDF5EB),
+                    shadowElevation = 5.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("M", color = MfitPalette.green, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                    }
+                }
+            }
+        },
+        bottomBar = {
+            Box(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp, top = 5.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.width(330.dp).height(68.dp),
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xDFFFFFFF),
+                    shadowElevation = 14.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White)
+                ) {
+                    Row(modifier = Modifier.fillMaxSize().padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        MfitTab.entries.forEach { tab ->
+                            val selected = selectedTab == tab
+                            Column(
+                                modifier = Modifier.weight(1f).fillMaxSize()
+                                    .background(
+                                        if (selected) Brush.linearGradient(listOf(Color(0xBFFFFFFF), Color(0x88D8F1E8))) else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent)),
+                                        RoundedCornerShape(50)
+                                    )
+                                    .clickable { selectedTab = tab }
+                                    .padding(vertical = 5.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                when (tab) {
+                                    MfitTab.Health -> androidx.compose.material3.Icon(Icons.Default.Favorite, null, tint = if (selected) MfitPalette.ink else MfitPalette.muted)
+                                    MfitTab.Sport -> androidx.compose.material3.Icon(Icons.Default.DirectionsRun, null, tint = if (selected) MfitPalette.ink else MfitPalette.muted)
+                                    MfitTab.Profile -> androidx.compose.material3.Icon(Icons.Default.Person, null, tint = if (selected) MfitPalette.ink else MfitPalette.muted)
+                                }
+                                Text(tab.label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (selected) MfitPalette.ink else MfitPalette.muted)
                             }
-                        },
-                        label = { Text(tab.label) }
-                    )
+                        }
+                    }
                 }
             }
         }

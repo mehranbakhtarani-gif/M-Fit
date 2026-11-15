@@ -201,21 +201,29 @@ object NativeBackupManager {
         for (i in 0 until measurementArray.length()) {
             val item = measurementArray.optJSONObject(i) ?: continue
             val weight = item.optDouble("weight", Double.NaN)
+            val height = item.optDouble("height", Double.NaN)
+            val waist = item.optDouble("waist", Double.NaN)
             val date = item.optString("date")
             val recordedAt = runCatching {
                 java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).parse(date)?.time
             }.getOrNull() ?: continue
-            if (!weight.isFinite() || weight !in 20.0..250.0) continue
+            val validWeight = weight.takeIf { it.isFinite() && it in 20.0..350.0 }
+            val validHeight = height.takeIf { it.isFinite() && it in 80.0..250.0 }
+            val validWaist = waist.takeIf { it.isFinite() && it in 30.0..250.0 }
+            if (validWeight == null && validHeight == null && validWaist == null) continue
             val id = "pwa-measure-$date-$i"
             if (!mergedMeasurements.containsKey(id)) {
-                mergedMeasurements[id] = JSONObject()
+                val record = JSONObject()
                     .put("id", id)
-                    .put("weightKg", weight)
                     .put("recordedAtMillis", recordedAt)
+                record.put("weightKg", validWeight ?: JSONObject.NULL)
+                validHeight?.let { record.put("heightCm", it) }
+                validWaist?.let { record.put("waistCm", it) }
+                mergedMeasurements[id] = record
                 restoredMeasurements++
             }
-            if (latestImportedWeight == null || recordedAt > latestImportedWeight!!.second) {
-                latestImportedWeight = weight to recordedAt
+            if (validWeight != null && (latestImportedWeight == null || recordedAt > latestImportedWeight!!.second)) {
+                latestImportedWeight = validWeight to recordedAt
             }
         }
         if (restoredMeasurements > 0) {

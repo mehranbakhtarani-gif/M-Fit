@@ -21,9 +21,11 @@ object FastingPreferences {
         return if (started > 0L && ends > started) FastingSession(started, ends) else null
     }
 
-    fun start(context: Context, durationHours: Int, nowMillis: Long = System.currentTimeMillis()): FastingSession? {
-        if (durationHours !in 1..48) return null
-        val session = FastingSession(nowMillis, nowMillis + durationHours * 60L * 60L * 1000L)
+    fun start(context: Context, durationHours: Int, nowMillis: Long = System.currentTimeMillis()): FastingSession? = startForMinutes(context, durationHours * 60, nowMillis)
+
+    fun startForMinutes(context: Context, durationMinutes: Int, nowMillis: Long = System.currentTimeMillis()): FastingSession? {
+        if (durationMinutes !in 1..2880) return null
+        val session = FastingSession(nowMillis, nowMillis + durationMinutes * 60L * 1000L)
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putLong(KEY_STARTED, session.startedAtMillis)
             .putLong(KEY_ENDS, session.targetEndAtMillis)

@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class ActivityLocationService : Service() {
@@ -163,11 +164,17 @@ class ActivityLocationService : Service() {
                     id, SessionStatus.FINISHED.name, now, snapshot.elapsedMillis,
                     snapshot.distanceMeters, snapshot.calories
                 )
+                withContext(Dispatchers.Main) {
+                    engine = null
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }
+        } else {
+            engine = null
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
         }
-        engine = null
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
     }
 
     private fun persistSnapshot(status: SessionStatus, endedAt: Long?) {

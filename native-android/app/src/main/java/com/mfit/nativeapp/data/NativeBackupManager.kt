@@ -71,6 +71,7 @@ object NativeBackupManager {
 
     suspend fun import(context: Context, raw: String): String {
         val root = JSONObject(raw)
+        if (root.optString("format") == "mfit-pwa-backup") return importLegacyPwa(context, root)
         require(root.optString("format") == "mfit-native-backup") { "فایل پشتیبان M-Fit معتبر نیست." }
         require(root.optInt("version", -1) == VERSION) { "نسخه فایل پشتیبان پشتیبانی نمی‌شود." }
 
@@ -141,4 +142,148 @@ object NativeBackupManager {
         }
         return "$restoredPreferenceValues تنظیم، $restoredSessions فعالیت و $restoredPoints نقطه مسیر بازیابی شد. داده‌های موجود بازنویسی نشدند."
     }
+    private suspend fun importLegacyPwa(context: Context, root: JSONObject): String {
+        require(root.optInt("version", -1) == 1) { "نسخه فایل پشتیبان PWA پشتیبانی نمی‌شود." }
+        val appData = root.optJSONObject("appData") ?: JSONObject()
+        val days = appData.optJSONObject("days") ?: JSONObject()
+        val dailyPrefs = context.getSharedPreferences("mfit_daily_health", Context.MODE_PRIVATE)
+        var restoredDailyValues = 0
+        days.keys().forEach { day ->
+            val record = days.optJSONObject(day) ?: return@forEach
+            val editor = dailyPrefs.edit()
+            val stepsKey = "steps_$day"
+            val waterKey = "water_$day"
+            if (!dailyPrefs.contains(stepsKey) && record.has("steps")) {
+                editor.putInt(stepsKey, record.optInt("steps", 0).coerceAtLeast(0))
+                restoredDailyValues++
+            }
+            if (!dailyPrefs.contains(waterKey) && record.has("water")) {
+                editor.putInt(waterKey, record.optInt("water", 0).coerceIn(0, 100))
+                restoredDailyValues++
+            }
+            val foodsKey = "foods_$day"
+            if (!dailyPrefs.contains(foodsKey) && record.optJSONArray("food") != null) {
+                val foods = JSONArray()
+                val sourceFoods = record.optJSONArray("food")!!
+                for (i in 0 until sourceFoods.length()) {
+                    val food = sourceFoods.optJSONObject(i) ?: continue
+                    val name = food.optString("name").trim().take(80)
+                    val calories = food.optInt("cal", food.optInt("calories", 0))
+                    if (name.isNotEmpty() && calories in 0..10000) {
+                        foods.put(
+                            JSONObject()
+                                .put("id", "pwa-$day-$i")
+                                .put("name", name)
+                                .put("calories", calories)
+                        )
+                    }
+                }
+                editor.putString(foodsKey, foods.toString())
+                restoredDailyValues++
+            }
+            editor.apply()
+        }
+
+        val dao = ActivityDatabase.get(context).activityDao()
+        var restoredSessions = 0
+        var restoredPoints = 0
+
+        suspend fun restoreLegacySession(
+            id: String,
+            mode: String,
+            timestamp: Long,
+            durationSeconds: Long,
+            distanceKm: Double,
+            calories: Int,
+            coordinates: JSONArray?,
+            interrupted: Boolean
+        ) {
+            if (timestamp <= 0L) return
+            val durationMillis = durationSeconds.coerceAtLeast(0L) * 1000L
+            val startedAt = (timestamp - durationMillis).coerceAtLeast(1L)
+            val sessionId = "pwa-$id"
+            val type = when (mode.lowercase()) {
+                "run" -> "RUN"
+                "ride", "cycling", "bike" -> "RIDE"
+                else -> "WALK"
+            }
+            val inserted = dao.restoreSessionIfMissing(
+                ActivitySessionEntity(
+                    id = sessionId,
+                    activityType = type,
+                    status = if (interrupted) "INTERRUPTED" else "FINISHED",
+                    startedAtMillis = startedAt,
+                    endedAtMillis = if (interrupted) null else timestamp,
+                    elapsedMillis = durationMillis,
+                    distanceMeters = (distanceKm * 1000.0).coerceAtLeast(0.0),
+                    calories = calories.coerceAtLeast(0)
+                )
+            )
+            if (inserted != -1L) restoredSessions++
+            if (coordinates == null) return
+            for (index in 0 until coordinates.length()) {
+                val point = coordinates.optJSONObject(index) ?: continue
+                val lat = point.optDouble("lat", Double.NaN)
+                val lon = point.optDouble("lon", Double.NaN)
+                val pointTime = point.optLong("time", startedAt + point.optDouble("elapsedSeconds", 0.0).toLong() * 1000L)
+                if (!lat.isFinite() || !lon.isFinite() || lat !in -90.0..90.0 || lon !in -180.0..180.0 || pointTime <= 0L) continue
+                val insertedPoint = dao.insertPoint(
+                    ActivityTrackPointEntity(
+                        sessionId = sessionId,
+                        latitude = lat,
+                        longitude = lon,
+                        timestampMillis = pointTime,
+                        accuracyMeters = point.optDouble("accuracy", 0.0).toFloat().coerceAtLeast(0f),
+                        segmentDistanceMeters = 0.0
+                    )
+                )
+                if (insertedPoint != -1L) restoredPoints++
+            }
+        }
+
+        val activityMap = linkedMapOf<String, JSONObject>()
+        val legacyHistory = appData.optJSONArray("history") ?: JSONArray()
+        val indexedActivities = root.optJSONArray("activities") ?: JSONArray()
+        listOf(legacyHistory, indexedActivities).forEach { array ->
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val timestamp = item.optLong("timestamp", 0L)
+                val id = item.optString("id").ifBlank { "activity-$timestamp-$index" }
+                activityMap.putIfAbsent(id, item)
+            }
+        }
+        activityMap.forEach { (id, item) ->
+            restoreLegacySession(
+                id = id,
+                mode = item.optString("mode", "Walk"),
+                timestamp = item.optLong("timestamp", 0L),
+                durationSeconds = item.optLong("duration", 0L),
+                distanceKm = item.optDouble("distance", 0.0),
+                calories = item.optDouble("kcal", 0.0).toInt(),
+                coordinates = item.optJSONArray("coords"),
+                interrupted = false
+            )
+        }
+
+        val draft = root.optJSONObject("activeSession")
+        if (draft != null) {
+            val savedAt = draft.optLong("savedAt", 0L)
+            val elapsedSeconds = draft.optDouble("elapsed", 0.0).toLong().coerceAtLeast(0L)
+            if (savedAt > 0L && (elapsedSeconds > 0L || (draft.optJSONArray("coords")?.length() ?: 0) > 0)) {
+                restoreLegacySession(
+                    id = "draft-$savedAt",
+                    mode = draft.optString("mode", "Walk"),
+                    timestamp = savedAt,
+                    durationSeconds = elapsedSeconds,
+                    distanceKm = draft.optDouble("distance", 0.0) / 1000.0,
+                    calories = 0,
+                    coordinates = draft.optJSONArray("coords"),
+                    interrupted = true
+                )
+            }
+        }
+
+        return "$restoredDailyValues مورد داده روزانه، $restoredSessions فعالیت و $restoredPoints نقطه مسیر از PWA وارد شد. داده‌های موجود بازنویسی نشدند."
+    }
+
 }

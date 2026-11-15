@@ -533,9 +533,14 @@ private fun HealthDashboardScreen() {
             Button(onClick = { showWeeklyReport = true }, modifier = Modifier.weight(1f)) { Text("گزارش هفتگی") }
             Button(onClick = { showMonthlyReport = true }, modifier = Modifier.weight(1f)) { Text("گزارش ماهانه") }
         }
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 5.dp)
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge)
+                Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge, color = MfitPalette.ink)
                 Text("$steps قدم", style = MaterialTheme.typography.headlineMedium)
                 androidx.compose.material3.LinearProgressIndicator(progress = { stepProgress }, modifier = Modifier.fillMaxWidth())
                 Text(
@@ -556,9 +561,14 @@ private fun HealthDashboardScreen() {
                 }) { Text("صفر کردن قدم‌های امروز") }
             }
         }
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 5.dp)
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("آب مصرفی", style = MaterialTheme.typography.titleLarge)
+                Text("آب مصرفی", style = MaterialTheme.typography.titleLarge, color = MfitPalette.ink)
                 Text("$water از ۸ لیوان", style = MaterialTheme.typography.headlineSmall)
                 androidx.compose.material3.LinearProgressIndicator(
                     progress = { (water / 8f).coerceIn(0f, 1f) },
@@ -571,9 +581,14 @@ private fun HealthDashboardScreen() {
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 5.dp)
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("تایمر روزه‌داری", style = MaterialTheme.typography.titleLarge)
+                Text("تایمر روزه‌داری", style = MaterialTheme.typography.titleLarge, color = MfitPalette.ink)
                 if (fastingSession == null) {
                     Text("مدت روزه‌ات را انتخاب کن تا زمان‌سنج شروع شود.", style = MaterialTheme.typography.bodySmall)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -613,9 +628,14 @@ private fun HealthDashboardScreen() {
             }
         }
 
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(25.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 5.dp)
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("کالری دریافتی", style = MaterialTheme.typography.titleLarge)
+                Text("کالری دریافتی", style = MaterialTheme.typography.titleLarge, color = MfitPalette.ink)
                 Text("$eatenCalories kcal", style = MaterialTheme.typography.headlineSmall)
                 TextField(value = foodName, onValueChange = { foodName = it }, modifier = Modifier.fillMaxWidth(), label = { Text("نام غذا") }, singleLine = true)
                 TextField(value = foodCalories, onValueChange = { foodCalories = it.filter(Char::isDigit).take(5) }, modifier = Modifier.fillMaxWidth(), label = { Text("کالری (kcal)") }, singleLine = true)

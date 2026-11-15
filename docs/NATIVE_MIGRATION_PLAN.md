@@ -134,3 +134,19 @@ Remaining limitations:
 - The UI still uses local Compose state for live pause/resume controls; a fully reactive service-state stream is a separate follow-up.
 - Finish writes are asynchronous; if the history list is refreshed before the service finishes its Room update, the user may need to tap refresh again.
 - No successful Gradle build, CI run, emulator test, or physical-device test has yet been observed for these latest changes.
+
+
+## Implemented increment — native route map and replay
+
+- Added osmdroid as a native Android map renderer, using the OpenStreetMap Mapnik tile source; no Google Maps API key is required.
+- Added Android INTERNET permission for downloading map tiles. The map credits OpenStreetMap contributors in the UI.
+- Activity details now render the stored GPS coordinates as a polyline, with start and current/end markers.
+- Added a replay scrubber that progressively reveals the saved route from its first point to its last point. The camera initially fits the route bounds; the user can then pan and zoom normally.
+- MapView is connected to Compose lifecycle resume/pause and detached when its composable leaves composition.
+
+Notes and remaining work:
+- Map tiles require an internet connection; saved route coordinates remain in Room and are not lost when offline, but an offline tile cache strategy is not implemented.
+- OpenStreetMap tile service usage must follow its tile usage policy; do not bulk-prefetch or use it as an unrestricted tile CDN.
+- The route scrubber is a manual replay control, not yet a timed animation with playback speed controls.
+- Device verification is still required for map gestures, tile loading, attribution visibility, and memory/lifecycle behavior on the target Android devices.
+- This implementation does not alter the PWA or existing activity data schema.

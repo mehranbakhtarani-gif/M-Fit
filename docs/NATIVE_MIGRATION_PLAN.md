@@ -213,13 +213,10 @@ Notes and remaining work:
 ## Release signing pipeline
 
 - The native Gradle module now supports a release signing configuration supplied only through environment variables; no keystore or passwords are committed to the repository.
-- CI always builds and uploads the debug APK. It builds and uploads a release APK only when all four repository Actions secrets are configured:
-  - `MFIT_RELEASE_KEYSTORE_BASE64`: base64-encoded persistent JKS/PKCS12 keystore.
-  - `MFIT_RELEASE_STORE_PASSWORD`: keystore password.
-  - `MFIT_RELEASE_KEY_ALIAS`: key alias.
-  - `MFIT_RELEASE_KEY_PASSWORD`: key password.
-- Add these under GitHub repository Settings → Secrets and variables → Actions → New repository secret. Never put the keystore or passwords in source control or chat.
-- The release pipeline does not silently fall back to debug signing. If any secret is missing, only the debug APK is produced.
+- CI always builds and uploads the debug APK. It builds and uploads a release APK when the existing repository Actions secret `MFIT_DEBUG_KEYSTORE_BASE64` is available.
+- The persistent keystore uses alias `androiddebugkey` and the standard Android debug-keystore passwords. Only the Base64 keystore is stored as a GitHub secret; no keystore file is committed to the repository.
+- The secret should be configured under GitHub repository Settings → Secrets and variables → Actions → New repository secret. The user previously reported adding it, but registration was not independently verified; the next CI run checks whether it is available by whether the signed-release steps execute.
+- The release pipeline does not silently fall back to debug signing. If the secret is missing, only the debug APK is produced.
 - Upgrade compatibility with any previously installed APK remains unverified until the same original signing certificate is confirmed. A different key cannot update an existing installation with the same application ID.
 
 

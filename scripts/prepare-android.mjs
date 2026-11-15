@@ -168,8 +168,7 @@ const javaSource = [
 '    JSObject data = new JSObject(); data.put("count", Math.max(1, Math.round(event.values[0]))); notifyListeners("step", data);',
 '  }',
 '  @Override public void onAccuracyChanged(Sensor sensor, int accuracy) { }',
-'  @Override protected void handleOnPause() { if (manager != null && listening) manager.unregisterListener(this); listening = false; }',
-'  @Override protected void handleOnResume() { if (manager != null && stepDetector != null && !listening) listening = manager.registerListener(this, stepDetector, SensorManager.SENSOR_DELAY_NORMAL); }',
+'  // Keep the hardware step detector registered while the activity is backgrounded. The OS may still reclaim the process; a foreground workout GPS watcher helps keep active sessions alive.',
 '}'
 ].join('\n');
 await writeFile(pluginDir + '/MfitMotionPlugin.java', javaSource);

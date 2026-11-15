@@ -125,8 +125,12 @@ public class MfitLiveUpdatePlugin extends Plugin {
       .setContentIntent(content)
       .setAutoCancel(false);
     if (Build.VERSION.SDK_INT >= 36) {
-      builder.setRequestPromotedOngoing(true);
-      builder.setShortCriticalText(paused ? "PAUSED" : "M-FIT");
+      // Android 16 QPR APIs may not exist in the compile SDK; use reflection
+      // so the APK remains buildable on stable SDK 36 while using them when present.
+      try {
+        builder.getClass().getMethod("setRequestPromotedOngoing", boolean.class).invoke(builder, true);
+        builder.getClass().getMethod("setShortCriticalText", String.class).invoke(builder, paused ? "PAUSED" : "M-FIT");
+      } catch (Exception ignored) { }
     }
     return builder.build();
   }

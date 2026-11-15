@@ -18,6 +18,7 @@ import com.mfit.nativeapp.core.activity.*
 import com.mfit.nativeapp.data.ActivityDatabase
 import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
+import com.mfit.nativeapp.data.UserProfilePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,7 +66,8 @@ class ActivityLocationService : Service() {
         activityType = runCatching { ActivityType.valueOf(rawType) }.getOrDefault(ActivityType.WALK)
         val id = intent.getStringExtra(EXTRA_SESSION_ID) ?: UUID.randomUUID().toString()
         sessionId = id
-        engine = ActivitySessionEngine()
+        val bodyMassKg = UserProfilePreferences.getWeightKg(this)
+        engine = ActivitySessionEngine(bodyMassKg = bodyMassKg)
         val now = System.currentTimeMillis()
         engine?.start(activityType, now)
         publishSnapshot()

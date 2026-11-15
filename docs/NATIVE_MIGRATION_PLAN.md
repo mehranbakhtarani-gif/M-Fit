@@ -56,7 +56,7 @@ Current strategy: incremental migration, not a rewrite-in-place. Preserve the cu
 - [x] Add isolated native Android Gradle/Compose app shell and a dedicated CI build workflow (initial scaffold only; build result not yet verified).
 - [ ] Add Room, Navigation, repository, and test foundations after the legacy data contract is specified.
 - [ ] Implement domain models and unit tests first.
-- [ ] Implement GPS tracking state machine + foreground service + Room persistence.
+- [x] Implement initial GPS tracking state machine + foreground service + Room persistence (device validation and recovery hardening remain open).
 - [ ] Implement remaining feature modules in parity order.
 - [ ] Add UI/integration/device tests and verify on physical Android device.
 - [ ] Set up signed release build and regression checklist.
@@ -119,3 +119,18 @@ Current limitations and release gates:
 - The service currently uses a provisional 2-second high-accuracy request. Battery use and GPS thresholds need field testing on the target phone.
 - The calorie estimate still uses a temporary 70kg assumption; connect profile body mass before showing it as a user-specific result.
 - No CI result is visible for the latest commit yet. The existence of source files is not proof of a successful Android build. Do not distribute an APK until GitHub Actions or a local Gradle build succeeds and physical-device tests pass.
+
+
+## Implemented increment — native activity history and ordered persistence
+
+- Added an activity-history section to the Native Sport screen, backed by the Room session table. It lists saved sessions with localized activity/status labels, date, distance, elapsed time and calorie estimate.
+- Selecting a history row loads its persisted GPS points and shows the point count plus first/last coordinates. This is a data inspection step; map rendering and visual route replay are still pending.
+- On app recreation, the Sport UI now restores the active/paused display state from the persisted unfinished session when the foreground location service is still active. If the service is no longer active, the session is marked interrupted and retained in history.
+- Room writes from the location service now use a single limited-parallelism dispatcher. The service waits for the session row to be inserted before starting location callbacks, preventing route-point inserts from racing ahead of session creation. Point inserts and session status/finish updates share the same serialized write queue.
+- History refresh is available manually; the screen reloads its list when opened and after a finish command.
+
+Remaining limitations:
+- The history detail currently exposes saved coordinates but does not yet draw or replay the route on a map.
+- The UI still uses local Compose state for live pause/resume controls; a fully reactive service-state stream is a separate follow-up.
+- Finish writes are asynchronous; if the history list is refreshed before the service finishes its Room update, the user may need to tap refresh again.
+- No successful Gradle build, CI run, emulator test, or physical-device test has yet been observed for these latest changes.

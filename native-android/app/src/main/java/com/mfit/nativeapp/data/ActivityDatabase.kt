@@ -59,6 +59,9 @@ interface ActivityDao {
     @Query("SELECT * FROM activity_sessions WHERE status IN ('RUNNING', 'PAUSED') ORDER BY startedAtMillis DESC LIMIT 1")
     suspend fun findUnfinishedSession(): ActivitySessionEntity?
 
+    @Query("UPDATE activity_sessions SET status = 'INTERRUPTED' WHERE status IN ('RUNNING', 'PAUSED')")
+    suspend fun markUnfinishedSessionsInterrupted()
+
     @Query("SELECT * FROM activity_track_points WHERE sessionId = :sessionId ORDER BY timestampMillis")
     suspend fun getPoints(sessionId: String): List<ActivityTrackPointEntity>
 

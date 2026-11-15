@@ -63,7 +63,7 @@ private fun MfitApp() {
     LaunchedEffect(Unit) {
         val dao = ActivityDatabase.get(context).activityDao()
         val unfinished = withContext(Dispatchers.IO) { dao.findUnfinishedSession() }
-        if (unfinished != null) {
+        if (unfinished != null && !ActivityLocationService.isActive) {
             withContext(Dispatchers.IO) { dao.markUnfinishedSessionsInterrupted() }
             recoveredNotice = "یک فعالیت ناتمام از قبل پیدا شد؛ نقاط GPS ثبت‌شده آن حفظ شده‌اند. وضعیت فعالیت به‌عنوان متوقف‌شده بر اثر بسته‌شدن برنامه ثبت شد."
         }

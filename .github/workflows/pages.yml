@@ -73,3 +73,5 @@ jobs:
 # Publish map-layer switching fix for hidden Leaflet attribution control.
 
 # Publish route-share canvas export compatibility fix from mfit-complete-fixes.
+
+<!-- route-export-diagnostic-refresh-20261115 -->

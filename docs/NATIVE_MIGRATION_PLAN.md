@@ -190,3 +190,21 @@ Notes and remaining work:
 - An Android AlarmManager reminder is scheduled for the target end time; notification permission can be requested from the Health screen on Android 13+.
 - Ending a session cancels its pending reminder.
 - The reminder uses an inexact idle-compatible alarm so it does not require the special exact-alarm permission. Delivery can be delayed by Android battery policies.
+
+
+## Native health reporting and profile history — implementation increment
+
+- Added a seven-day health report aggregating locally stored steps, hydration, food calories, and completed Room activity sessions.
+- Daily step values are retained under date-specific keys so opening the dashboard on a later day does not erase previously recorded daily totals.
+- Added a current-calendar-month report with daily step progress and monthly totals for hydration, logged food calories, completed activities, and route distance.
+- Added local body-weight measurement history. Saving a profile weight records a timestamped measurement; the profile displays the latest 12 entries as a simple trend.
+- Historical values that were never recorded by the Native app are not fabricated. PWA history is not yet imported by this increment.
+
+## Native backup and restore — versioned, merge-only
+
+- Added a versioned JSON backup format containing allowlisted Native SharedPreferences stores, Room activity sessions, and route points.
+- Added profile actions to export a backup using Android's document picker and restore a previously exported JSON file.
+- Restore validates the format/version, validates GPS coordinate ranges, inserts sessions and points without deleting existing rows, and skips preference keys already present on the device.
+- In-progress activity sessions in a backup are restored as INTERRUPTED so an imported backup cannot silently restart GPS tracking.
+- Backup/restore currently covers Native app data only. A dedicated, verified PWA export/import adapter remains a release gate; do not imply that this file contains legacy PWA localStorage or IndexedDB data.
+- Physical-device testing is still required for Android document-provider behavior, backup round-trip, large route histories, and restore interruption.

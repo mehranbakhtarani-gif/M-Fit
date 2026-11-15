@@ -56,6 +56,8 @@ import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mfit.nativeapp.core.activity.SessionStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -79,6 +81,13 @@ private fun MfitApp() {
     val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(MfitTab.Health) }
     var trackingState by remember { mutableStateOf(UiTrackingState.IDLE) }
+    val liveSnapshot by ActivityLocationService.snapshot.collectAsStateWithLifecycle()
+    val effectiveTrackingState = when (liveSnapshot?.status) {
+        SessionStatus.RUNNING -> UiTrackingState.RUNNING
+        SessionStatus.PAUSED -> UiTrackingState.PAUSED
+        SessionStatus.FINISHED -> UiTrackingState.FINISHED
+        else -> trackingState
+    }
     var activityType by remember { mutableStateOf(ActivityType.WALK) }
     var recoveredNotice by remember { mutableStateOf<String?>(null) }
     var historyRefresh by remember { mutableIntStateOf(0) }
@@ -193,14 +202,25 @@ private fun MfitApp() {
                         recoveredNotice?.let {
                             Text(it, modifier = Modifier.padding(vertical = 8.dp), style = MaterialTheme.typography.bodySmall)
                         }
-                        Text("نوع فعالیت: ${activityType.name}", modifier = Modifier.padding(vertical = 8.dp))
+                        Text("نوع فعالیت: ${liveSnapshot?.type?.let { type -> when (type) { ActivityType.WALK -> "پیاده‌روی"; ActivityType.RUN -> "دویدن"; ActivityType.RIDE -> "دوچرخه" } } ?: activityType.name}", modifier = Modifier.padding(vertical = 8.dp))
+                        liveSnapshot?.let { snapshot ->
+                            Card(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("زمان: ${snapshot.elapsedMillis / 3_600_000L}:%02d:%02d".format((snapshot.elapsedMillis / 60_000L) % 60L, (snapshot.elapsedMillis / 1_000L) % 60L), style = MaterialTheme.typography.titleMedium)
+                                    Text("مسافت: %.2f کیلومتر".format(Locale.US, snapshot.distanceMeters / 1000.0))
+                                    Text("سرعت فعلی: %.1f km/h  ·  میانگین: %.1f km/h".format(Locale.US, snapshot.currentSpeedMetersPerSecond * 3.6, snapshot.averageSpeedMetersPerSecond * 3.6))
+                                    Text("کالری تخمینی: ${snapshot.calories} kcal")
+                                    Text("نقاط GPS: ${snapshot.points.size}", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { activityType = ActivityType.WALK }, enabled = trackingState == UiTrackingState.IDLE || trackingState == UiTrackingState.FINISHED) { Text("پیاده‌روی") }
-                            Button(onClick = { activityType = ActivityType.RUN }, enabled = trackingState == UiTrackingState.IDLE || trackingState == UiTrackingState.FINISHED) { Text("دویدن") }
-                            Button(onClick = { activityType = ActivityType.RIDE }, enabled = trackingState == UiTrackingState.IDLE || trackingState == UiTrackingState.FINISHED) { Text("دوچرخه") }
+                            Button(onClick = { activityType = ActivityType.WALK }, enabled = effectiveTrackingState == UiTrackingState.IDLE || effectiveTrackingState == UiTrackingState.FINISHED) { Text("پیاده‌روی") }
+                            Button(onClick = { activityType = ActivityType.RUN }, enabled = effectiveTrackingState == UiTrackingState.IDLE || effectiveTrackingState == UiTrackingState.FINISHED) { Text("دویدن") }
+                            Button(onClick = { activityType = ActivityType.RIDE }, enabled = effectiveTrackingState == UiTrackingState.IDLE || effectiveTrackingState == UiTrackingState.FINISHED) { Text("دوچرخه") }
                         }
                         Text(
-                            when (trackingState) {
+                            when (effectiveTrackingState) {
                                 UiTrackingState.IDLE -> "آماده شروع"
                                 UiTrackingState.RUNNING -> "در حال ثبت مسیر در پس‌زمینه"
                                 UiTrackingState.PAUSED -> "فعالیت متوقف شده"
@@ -209,22 +229,22 @@ private fun MfitApp() {
                             modifier = Modifier.padding(vertical = 12.dp)
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { startTracking() }, enabled = trackingState == UiTrackingState.IDLE || trackingState == UiTrackingState.FINISHED) { Text("شروع") }
+                            Button(onClick = { startTracking() }, enabled = effectiveTrackingState == UiTrackingState.IDLE || effectiveTrackingState == UiTrackingState.FINISHED) { Text("شروع") }
                             Button(
                                 onClick = {
-                                    val wasRunning = trackingState == UiTrackingState.RUNNING
+                                    val wasRunning = effectiveTrackingState == UiTrackingState.RUNNING
                                     sendServiceAction(if (wasRunning) ActivityLocationService.ACTION_PAUSE else ActivityLocationService.ACTION_RESUME)
                                     trackingState = if (wasRunning) UiTrackingState.PAUSED else UiTrackingState.RUNNING
                                 },
-                                enabled = trackingState == UiTrackingState.RUNNING || trackingState == UiTrackingState.PAUSED
-                            ) { Text(if (trackingState == UiTrackingState.RUNNING) "مکث" else "ادامه") }
+                                enabled = effectiveTrackingState == UiTrackingState.RUNNING || effectiveTrackingState == UiTrackingState.PAUSED
+                            ) { Text(if (effectiveTrackingState == UiTrackingState.RUNNING) "مکث" else "ادامه") }
                             Button(
                                 onClick = {
                                     sendServiceAction(ActivityLocationService.ACTION_FINISH)
                                     trackingState = UiTrackingState.FINISHED
                                     historyRefresh++
                                 },
-                                enabled = trackingState == UiTrackingState.RUNNING || trackingState == UiTrackingState.PAUSED
+                                enabled = effectiveTrackingState == UiTrackingState.RUNNING || effectiveTrackingState == UiTrackingState.PAUSED
                             ) { Text("پایان") }
                         }
                         Text(

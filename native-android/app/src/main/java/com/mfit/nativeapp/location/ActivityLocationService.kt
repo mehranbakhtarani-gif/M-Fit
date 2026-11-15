@@ -210,7 +210,7 @@ class ActivityLocationService : Service() {
 
     private fun startSnapshotTicker() {
         tickerJob?.cancel()
-        tickerJob = serviceScope.launch {
+        tickerJob = serviceScope.launch(Dispatchers.Main.immediate) {
             while (engine != null) {
                 publishSnapshot()
                 delay(1_000L)

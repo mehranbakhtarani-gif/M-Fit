@@ -71,6 +71,15 @@ jobs:
           done
       - name: Prepare web app
         run: npm run prepare:web
+      - name: Verify latest PWA UI is included in Android web bundle
+        run: |
+          test -s www/index.html
+          grep -q 'fast-time-wheel' www/index.html
+          grep -q 'fastHoursTrigger' www/index.html
+          grep -q 'fast-settings-row' www/index.html
+          grep -q 'timePickerTick' www/index.html
+          grep -q 'timePickerSelectHaptic' www/index.html
+          echo "Verified fasting wheel, target-hours control, compact card layout, and haptic feedback in Android bundle."
       - name: Generate Android project
         run: npx cap add android
       - name: Generate Mfit launcher resources and native Live Update integration

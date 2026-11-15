@@ -37,6 +37,7 @@ class ActivityLocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isActive = true
         fusedClient = LocationServices.getFusedLocationProviderClient(this)
         database = ActivityDatabase.get(this)
         createNotificationChannel()
@@ -229,6 +230,7 @@ class ActivityLocationService : Service() {
     override fun onDestroy() {
         callback?.let { fusedClient.removeLocationUpdates(it) }
         callback = null
+        isActive = false
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -236,6 +238,8 @@ class ActivityLocationService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     companion object {
+        @Volatile var isActive: Boolean = false
+            private set
         const val ACTION_START = "com.mfit.nativeapp.location.START"
         const val ACTION_PAUSE = "com.mfit.nativeapp.location.PAUSE"
         const val ACTION_RESUME = "com.mfit.nativeapp.location.RESUME"

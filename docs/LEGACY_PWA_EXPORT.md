@@ -24,4 +24,4 @@ The script opens IndexedDB in read-only mode, does not clear or rewrite localSto
 - Run the script on the exact origin where the PWA data is stored. Running it on a GitHub repository page or a different browser profile will not access the PWA's storage.
 - Keep the exported JSON private; it may contain location tracks and personal activity history.
 - Do not uninstall, clear browser storage, or reset the PWA until the native import has been implemented and verified.
-- The export utility is a migration bridge, not yet a completed native import workflow.
+- The native app's Profile → Restore Data action accepts this PWA backup format. Import is additive: existing native preferences and records are preserved, duplicate sessions/route points are ignored, and unfinished drafts are restored as interrupted activities. Verify the imported history before deleting or resetting the old PWA.

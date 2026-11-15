@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class ActivityLocationService : Service() {
+    private val databaseDispatcher = Dispatchers.IO.limitedParallelism(1)
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var fusedClient: FusedLocationProviderClient
     private lateinit var database: ActivityDatabase
@@ -73,7 +74,8 @@ class ActivityLocationService : Service() {
             startForeground(NOTIFICATION_ID, notification)
         }
 
-        serviceScope.launch {
+        // Serialize Room writes and wait for the session row before accepting route points.
+        serviceScope.launch(databaseDispatcher) {
             database.activityDao().insertSession(
                 ActivitySessionEntity(
                     id = id,
@@ -82,8 +84,8 @@ class ActivityLocationService : Service() {
                     startedAtMillis = now
                 )
             )
+            withContext(Dispatchers.Main) { requestLocationUpdates() }
         }
-        requestLocationUpdates()
     }
 
     private fun requestLocationUpdates() {
@@ -109,7 +111,7 @@ class ActivityLocationService : Service() {
                     )
                     if (decision.accepted) {
                         val point = activeEngine.snapshot(location.time).points.lastOrNull() ?: return@forEach
-                        serviceScope.launch {
+                        serviceScope.launch(databaseDispatcher) {
                             database.activityDao().insertPoint(
                                 ActivityTrackPointEntity(
                                     sessionId = id,
@@ -160,7 +162,7 @@ class ActivityLocationService : Service() {
         val snapshot = active.finish(now) ?: return
         val id = sessionId
         if (id != null) {
-            serviceScope.launch {
+            serviceScope.launch(databaseDispatcher) {
                 database.activityDao().updateSession(
                     id, SessionStatus.FINISHED.name, now, snapshot.elapsedMillis,
                     snapshot.distanceMeters, snapshot.calories
@@ -181,7 +183,7 @@ class ActivityLocationService : Service() {
     private fun persistSnapshot(status: SessionStatus, endedAt: Long?) {
         val snapshot = engine?.snapshot(System.currentTimeMillis()) ?: return
         val id = sessionId ?: return
-        serviceScope.launch {
+        serviceScope.launch(databaseDispatcher) {
             database.activityDao().updateSession(
                 id, status.name, endedAt, snapshot.elapsedMillis,
                 snapshot.distanceMeters, snapshot.calories

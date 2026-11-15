@@ -885,32 +885,33 @@ $('history').addEventListener('click',async event=>{const button=event.target.cl
  function routeImageBlob(route,stats){
   return new Promise((resolve,reject)=>{
    if(!liveMap){reject(new Error('Live map is not initialized'));return}
-   const mapEl=liveMap.getContainer(),tiles=[...mapEl.querySelectorAll('.leaflet-tile')].filter(img=>img.complete&&img.naturalWidth>0),mapCanvas=mapEl.querySelector('.maplibregl-canvas');
+   const mapEl=liveMap.getContainer(),tiles=[...mapEl.querySelectorAll('.leaflet-tile')].filter(img=>img.complete&&img.naturalWidth>0&&img.crossOrigin==='anonymous');
    const canvas=document.createElement('canvas');canvas.width=2400;canvas.height=3000;const ctx=canvas.getContext('2d');if(!ctx){reject(new Error('Canvas unavailable'));return}ctx.scale(2,2);
+   const roundedRectPath=(x,y,w,h,r)=>{const radius=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+radius,y);ctx.lineTo(x+w-radius,y);ctx.quadraticCurveTo(x+w,y,x+w,y+radius);ctx.lineTo(x+w,y+h-radius);ctx.quadraticCurveTo(x+w,y+h,x+w-radius,y+h);ctx.lineTo(x+radius,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-radius);ctx.lineTo(x,y+radius);ctx.quadraticCurveTo(x,y,x+radius,y);ctx.closePath()};
    const bg=ctx.createLinearGradient(0,0,1200,1500);bg.addColorStop(0,'#e9fff5');bg.addColorStop(1,'#e8f3ff');ctx.fillStyle=bg;ctx.fillRect(0,0,1200,1500);
-   ctx.fillStyle='rgba(255,255,255,.88)';ctx.beginPath();ctx.roundRect(55,55,1090,1390,54);ctx.fill();
+   ctx.fillStyle='rgba(255,255,255,.88)';roundedRectPath(55,55,1090,1390,54);ctx.fill();
    ctx.fillStyle='#183e35';ctx.font='800 54px system-ui';ctx.fillText('M FIT',105,145);
    ctx.fillStyle='#6b8c81';ctx.font='600 24px system-ui';ctx.fillText('YOUR ACTIVITY ROUTE',105,193);
    const weather=stats.weather,wx={x:105,y:245,w:990,h:175};
-   ctx.save();ctx.shadowColor='rgba(31,65,82,.10)';ctx.shadowBlur=24;ctx.fillStyle='rgba(255,255,255,.84)';ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(wx.x,wx.y,wx.w,wx.h,32);ctx.fill();ctx.stroke();ctx.restore();
+   ctx.save();ctx.shadowColor='rgba(31,65,82,.10)';ctx.shadowBlur=24;ctx.fillStyle='rgba(255,255,255,.84)';ctx.strokeStyle='rgba(255,255,255,.98)';ctx.lineWidth=3;roundedRectPath(wx.x,wx.y,wx.w,wx.h,32);ctx.fill();ctx.stroke();ctx.restore();
    ctx.fillStyle='#edf6f8';ctx.beginPath();ctx.arc(wx.x+105,wx.y+86,54,0,Math.PI*2);ctx.fill();
    ctx.fillStyle='#d99b35';ctx.font='700 66px system-ui';ctx.textAlign='center';ctx.fillText(weather?weather.icon:'☁',wx.x+105,wx.y+108);ctx.textAlign='left';
    ctx.fillStyle='#78909b';ctx.font='800 19px system-ui';ctx.fillText('WEATHER AT ACTIVITY TIME',wx.x+195,wx.y+48);
    ctx.fillStyle='#183e35';ctx.font='800 66px system-ui';ctx.fillText(weather?weather.temp+'°':'—',wx.x+195,wx.y+119);
    ctx.fillStyle='#607c78';ctx.font='600 24px system-ui';ctx.fillText(weather?weather.label:'Weather unavailable',wx.x+390,wx.y+111);
    ctx.fillStyle='#82978f';ctx.font='500 18px system-ui';ctx.fillText(weather?(weather.wind!==null?'Wind '+weather.wind+' km/h':'')+(weather.humidity!==null?'   ·   Humidity '+weather.humidity+'%':''):'Historical weather data unavailable',wx.x+195,wx.y+151);
-   const box={x:105,y:455,w:990,h:600},rect=mapEl.getBoundingClientRect();ctx.save();ctx.beginPath();ctx.roundRect(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle='#edf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);
+   const box={x:105,y:455,w:990,h:600},rect=mapEl.getBoundingClientRect();ctx.save();roundedRectPath(box.x,box.y,box.w,box.h,34);ctx.clip();ctx.fillStyle='#edf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);
    let basemapDrawn=false;
    try{
-    if(mapCanvas&&mapCanvas.width>0&&mapCanvas.height>0){ctx.drawImage(mapCanvas,box.x,box.y,box.w,box.h);basemapDrawn=true}
-    else if(tiles.length){for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}basemapDrawn=true}
+    /* Never copy the MapLibre WebGL canvas: third-party imagery can taint the export canvas and make PNG creation fail. Leaflet tiles are copied only when loaded with anonymous CORS. */
+    if(tiles.length){for(const tile of tiles){const r=tile.getBoundingClientRect();ctx.drawImage(tile,box.x+(r.left-rect.left)/rect.width*box.w,box.y+(r.top-rect.top)/rect.height*box.h,r.width/rect.width*box.w,r.height/rect.height*box.h)}basemapDrawn=true}
    }catch(e){console.warn('M FIT basemap snapshot unavailable; exporting route on clean background:',e)}
    if(!basemapDrawn){ctx.fillStyle='#eaf2ef';ctx.fillRect(box.x,box.y,box.w,box.h);ctx.strokeStyle='rgba(70,120,105,.12)';ctx.lineWidth=1;for(let x=box.x+40;x<box.x+box.w;x+=80){ctx.beginPath();ctx.moveTo(x,box.y);ctx.lineTo(x,box.y+box.h);ctx.stroke()}for(let y=box.y+40;y<box.y+box.h;y+=80){ctx.beginPath();ctx.moveTo(box.x,y);ctx.lineTo(box.x+box.w,y);ctx.stroke()}}
    if(route.length){const pts=route.map(p=>{const q=liveMap.latLngToContainerPoint([Number(p.lat),Number(p.lon)]);return{x:box.x+q.x/rect.width*box.w,y:box.y+q.y/rect.height*box.h}});ctx.shadowColor='#168e6b88';ctx.shadowBlur=22;ctx.strokeStyle='#fff';ctx.lineWidth=25;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();ctx.shadowBlur=0;ctx.strokeStyle='#20a879';ctx.lineWidth=15;ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();for(const [p,color] of [[pts[0],'#168e6b'],[pts[pts.length-1],'#f08a55']]){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(p.x,p.y,23,0,Math.PI*2);ctx.fill();ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,14,0,Math.PI*2);ctx.fill()}}
    ctx.restore();
    ctx.fillStyle='#183e35';ctx.font='800 42px system-ui';ctx.fillText(stats.mode,105,1125);
    const metrics=[['DISTANCE',stats.distance+' km'],['DURATION',stats.duration],['AVG SPEED',stats.avgSpeed.toFixed(1)+' km/h'],['AVG PACE',stats.mode==='Ride'?'—':paceText(stats.avgPace)],['CALORIES',stats.kcal+' kcal']];
-   metrics.forEach((m,i)=>{const x=105+i*200;ctx.fillStyle='#edf6f1';ctx.beginPath();ctx.roundRect(x,1160,190,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='700 15px system-ui';ctx.fillText(m[0],x+16,1205);ctx.fillStyle='#183e35';ctx.font='800 29px system-ui';ctx.fillText(m[1],x+16,1265)});
+   metrics.forEach((m,i)=>{const x=105+i*200;ctx.fillStyle='#edf6f1';roundedRectPath(x,1160,190,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='700 15px system-ui';ctx.fillText(m[0],x+16,1205);ctx.fillStyle='#183e35';ctx.font='800 29px system-ui';ctx.fillText(m[1],x+16,1265)});
    ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(stats.activityDate||'',105,1375);
    ctx.fillStyle='#91a69e';ctx.font='600 18px system-ui';ctx.textAlign='right';ctx.fillText('M FIT · MOVE WELL',1095,1375);ctx.textAlign='left';
    canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');

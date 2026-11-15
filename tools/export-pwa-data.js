@@ -16,7 +16,12 @@
   if (!appData) throw new Error("M-Fit data was not found in this browser origin.");
 
   const activeSession = parseStoredJson(DRAFT_KEY);
-  const fastingState = parseStoredJson("mfit-fast-timer-v2");
+  const savedFastingState = parseStoredJson("mfit-fast-timer-v2");
+  const fastingState = savedFastingState || (
+    appData.fasting && Number(appData.fastStart) > 0
+      ? { fasting: true, start: Number(appData.fastStart), target: Number(appData.fastTarget) || 16 }
+      : null
+  );
   const activities = await new Promise((resolve, reject) => {
     if (!("indexedDB" in window)) return reject(new Error("IndexedDB is unavailable."));
     const request = indexedDB.open(DB_NAME);

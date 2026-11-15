@@ -54,6 +54,7 @@ import com.mfit.nativeapp.data.ActivityTrackPointEntity
 import com.mfit.nativeapp.data.UserProfilePreferences
 import com.mfit.nativeapp.data.DailyHealthPreferences
 import com.mfit.nativeapp.data.BodyMeasurementPreferences
+import com.mfit.nativeapp.data.NativeBackupManager
 import com.mfit.nativeapp.data.FastingPreferences
 import com.mfit.nativeapp.data.FastingSession
 import com.mfit.nativeapp.data.FastingAlarmReceiver
@@ -71,6 +72,7 @@ import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mfit.nativeapp.core.activity.SessionStatus
 import java.text.SimpleDateFormat
@@ -94,6 +96,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun MfitApp() {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var selectedTab by remember { mutableStateOf(MfitTab.Health) }
     var trackingState by remember { mutableStateOf(UiTrackingState.IDLE) }
     val liveSnapshot by ActivityLocationService.snapshot.collectAsStateWithLifecycle()
@@ -112,6 +115,29 @@ private fun MfitApp() {
     var savedWeightKg by remember { mutableStateOf(UserProfilePreferences.getWeightKg(context)) }
     var weightHistory by remember { mutableStateOf(BodyMeasurementPreferences.history(context)) }
     var weightInput by remember { mutableStateOf(savedWeightKg?.let { formatWeight(it) } ?: "") }
+    val backupExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) coroutineScope.launch {
+            runCatching {
+                val json = withContext(Dispatchers.IO) { NativeBackupManager.export(context) }
+                withContext(Dispatchers.IO) { context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(json) } ?: error("امکان ذخیره فایل وجود ندارد.") }
+            }.onSuccess { Toast.makeText(context, "فایل پشتیبان ذخیره شد.", Toast.LENGTH_LONG).show() }
+             .onFailure { Toast.makeText(context, "خطا در پشتیبان‌گیری: ${it.message}", Toast.LENGTH_LONG).show() }
+        }
+    }
+    val backupImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) coroutineScope.launch {
+            runCatching {
+                val json = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("فایل خوانده نشد.") }
+                val message = withContext(Dispatchers.IO) { NativeBackupManager.import(context, json) }
+                savedWeightKg = UserProfilePreferences.getWeightKg(context)
+                weightInput = savedWeightKg?.let { formatWeight(it) } ?: ""
+                weightHistory = BodyMeasurementPreferences.history(context)
+                historyRefresh++
+                message
+            }.onSuccess { Toast.makeText(context, it, Toast.LENGTH_LONG).show() }
+             .onFailure { Toast.makeText(context, "بازیابی انجام نشد: ${it.message}", Toast.LENGTH_LONG).show() }
+        }
+    }
 
     LaunchedEffect(Unit) {
         val dao = ActivityDatabase.get(context).activityDao()
@@ -220,6 +246,8 @@ private fun MfitApp() {
                     weightInput = weightInput,
                     savedWeightKg = savedWeightKg,
                     weightHistory = weightHistory,
+                    onExportBackup = { backupExportLauncher.launch("mfit-backup-${System.currentTimeMillis()}.json") },
+                    onImportBackup = { backupImportLauncher.launch(arrayOf("application/json", "text/json", "application/octet-stream")) },
                     onWeightInputChange = { weightInput = it },
                     onSaveWeight = {
                         val parsed = weightInput.trim().replace(',', '.').toDoubleOrNull()
@@ -532,6 +560,8 @@ private fun ProfileScreen(
     weightInput: String,
     savedWeightKg: Double?,
     weightHistory: List<com.mfit.nativeapp.data.BodyMeasurement>,
+    onExportBackup: () -> Unit,
+    onImportBackup: () -> Unit,
     onWeightInputChange: (String) -> Unit,
     onSaveWeight: () -> Unit
 ) {
@@ -540,6 +570,12 @@ private fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("پروفایل", style = MaterialTheme.typography.headlineMedium)
+        Text("پشتیبان‌گیری و انتقال اطلاعات", style = MaterialTheme.typography.titleLarge)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onExportBackup) { Text("خروجی اطلاعات") }
+            Button(onClick = onImportBackup) { Text("بازیابی اطلاعات") }
+        }
+        Text("بازیابی به‌صورت ادغام انجام می‌شود؛ اطلاعات موجود بازنویسی یا حذف نمی‌شوند.", style = MaterialTheme.typography.bodySmall)
         Text("وزن بدن برای تخمین کالری فعالیت‌ها استفاده می‌شود.")
         TextField(
             value = weightInput,

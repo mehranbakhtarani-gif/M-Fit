@@ -50,6 +50,16 @@ class ActivitySessionEngineTest {
         assertEquals(2, engine.snapshot(11_000L).points.size)
     }
 
+    @Test fun caloriesUseSuppliedBodyMassAndRemainUnavailableWithoutIt() {
+        val defaultEngine = ActivitySessionEngine()
+        defaultEngine.start(ActivityType.WALK, 0L)
+        assertEquals(0, defaultEngine.snapshot(3_600_000L).calories)
+
+        val weightedEngine = ActivitySessionEngine(bodyMassKg = 80.0)
+        weightedEngine.start(ActivityType.WALK, 0L)
+        assertEquals(280, weightedEngine.snapshot(3_600_000L).calories)
+    }
+
     @Test fun invalidStateTransitionsAreRejected() {
         val engine = ActivitySessionEngine()
         assertFalse(engine.pause(1_000L))

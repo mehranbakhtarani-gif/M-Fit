@@ -69,3 +69,5 @@ jobs:
 # Publish native fasting-notification parity updates for the shared PWA.
 # Publish typography scale update from mfit-complete-fixes.
 # Publish map attribution cleanup from mfit-complete-fixes.
+
+# Publish map-layer switching fix for hidden Leaflet attribution control.

@@ -67,3 +67,4 @@ jobs:
 # Publish native haptics and the service-worker cache isolation fix.
 
 # Publish native fasting-notification parity updates for the shared PWA.
+# Publish typography scale update from mfit-complete-fixes.

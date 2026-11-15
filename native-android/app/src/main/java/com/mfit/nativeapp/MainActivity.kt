@@ -43,6 +43,10 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -99,7 +103,7 @@ private enum class UiTrackingState { IDLE, RUNNING, PAUSED, FINISHED }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MfitTheme { MfitApp() } }
+        setContent { CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) { MfitTheme { MfitApp() } } }
     }
 }
 
@@ -492,10 +496,43 @@ private fun HealthDashboardScreen() {
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("سلامت روزانه", style = MaterialTheme.typography.headlineMedium)
-        Text("پیشرفت امروزت را ثبت و دنبال کن.", style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = { showWeeklyReport = true }, modifier = Modifier.fillMaxWidth()) { Text("گزارش هفتگی سلامت") }
-        Button(onClick = { showMonthlyReport = true }, modifier = Modifier.fillMaxWidth()) { Text("گزارش ماهانه سلامت") }
+        Text("سلام، روزت پرانرژی", style = MaterialTheme.typography.headlineMedium, color = MfitPalette.ink)
+        Text("قدم‌های کوچک، تغییرهای بزرگ.", style = MaterialTheme.typography.bodyMedium, color = MfitPalette.muted)
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(30.dp),
+            colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MfitPalette.glass),
+            elevation = androidx.compose.material3.CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(86.dp)) {
+                    CircularProgressIndicator(
+                        progress = { stepProgress },
+                        modifier = Modifier.fillMaxSize(),
+                        strokeWidth = 8.dp,
+                        color = MfitPalette.green,
+                        trackColor = Color(0xFFDCEEE8)
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("${(stepProgress * 100).toInt()}%", fontSize = 21.sp, fontWeight = FontWeight.ExtraBold, color = MfitPalette.ink)
+                        Text("امروز", fontSize = 9.sp, color = MfitPalette.muted)
+                    }
+                }
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("پیشرفت روزانه", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MfitPalette.ink)
+                    Text("$steps قدم از ۷۰۰۰ قدم هدف", fontSize = 11.sp, color = MfitPalette.muted)
+                    Text(if (steps >= 7000) "عالیه! به هدفت رسیدی." else "هر قدم تو را به هدفت نزدیک‌تر می‌کند.", fontSize = 10.sp, color = MfitPalette.green)
+                }
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { showWeeklyReport = true }, modifier = Modifier.weight(1f)) { Text("گزارش هفتگی") }
+            Button(onClick = { showMonthlyReport = true }, modifier = Modifier.weight(1f)) { Text("گزارش ماهانه") }
+        }
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge)

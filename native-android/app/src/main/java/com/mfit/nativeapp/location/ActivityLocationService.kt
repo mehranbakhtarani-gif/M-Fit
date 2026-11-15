@@ -84,7 +84,11 @@ class ActivityLocationService : Service() {
                     startedAtMillis = now
                 )
             )
-            withContext(Dispatchers.Main) { requestLocationUpdates() }
+            withContext(Dispatchers.Main) {
+                if (engine?.snapshot(System.currentTimeMillis())?.status == SessionStatus.RUNNING) {
+                    requestLocationUpdates()
+                }
+            }
         }
     }
 

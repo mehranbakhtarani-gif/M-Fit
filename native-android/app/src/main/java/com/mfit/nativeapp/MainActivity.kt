@@ -5,6 +5,10 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -33,6 +37,7 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +50,7 @@ import com.mfit.nativeapp.data.ActivityDatabase
 import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
 import com.mfit.nativeapp.data.UserProfilePreferences
+import com.mfit.nativeapp.data.DailyHealthPreferences
 import com.mfit.nativeapp.location.ActivityLocationService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -202,7 +208,7 @@ private fun MfitApp() {
             color = MaterialTheme.colorScheme.background
         ) {
             when (selectedTab) {
-                MfitTab.Health -> PlaceholderScreen("بخش سلامت — در حال آماده‌سازی نسخه Native")
+                MfitTab.Health -> HealthDashboardScreen()
                 MfitTab.Profile -> ProfileScreen(
                     weightInput = weightInput,
                     savedWeightKg = savedWeightKg,
@@ -316,6 +322,122 @@ private fun MfitApp() {
     }
 }
 
+
+
+@Composable
+private fun HealthDashboardScreen() {
+    val context = LocalContext.current
+    val sensorManager = remember { context.getSystemService(android.content.Context.SENSOR_SERVICE) as SensorManager }
+    val stepSensor = remember { sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
+    var steps by remember { mutableIntStateOf(DailyHealthPreferences.steps(context)) }
+    var water by remember { mutableIntStateOf(DailyHealthPreferences.water(context)) }
+    var foods by remember { mutableStateOf(DailyHealthPreferences.foods(context)) }
+    var foodName by remember { mutableStateOf("") }
+    var foodCalories by remember { mutableStateOf("") }
+    var hasActivityPermission by remember {
+        mutableStateOf(
+            android.os.Build.VERSION.SDK_INT < 29 ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasActivityPermission = granted
+    }
+
+    DisposableEffect(stepSensor, hasActivityPermission) {
+        if (stepSensor != null && hasActivityPermission) {
+            val listener = object : SensorEventListener {
+                override fun onSensorChanged(event: SensorEvent) {
+                    if (event.values.isNotEmpty()) {
+                        steps = DailyHealthPreferences.recordStepCounter(context, event.values[0].toLong())
+                    }
+                }
+                override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit
+            }
+            sensorManager.registerListener(listener, stepSensor, SensorManager.SENSOR_DELAY_NORMAL)
+            onDispose { sensorManager.unregisterListener(listener) }
+        } else {
+            onDispose { }
+        }
+    }
+
+    val eatenCalories = foods.sumOf { it.calories }
+    val stepProgress = (steps / 7000f).coerceIn(0f, 1f)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text("سلامت روزانه", style = MaterialTheme.typography.headlineMedium)
+        Text("پیشرفت امروزت را ثبت و دنبال کن.", style = MaterialTheme.typography.bodyMedium)
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("قدم‌های امروز", style = MaterialTheme.typography.titleLarge)
+                Text("%,d قدم".format(Locale.US, steps), style = MaterialTheme.typography.headlineMedium)
+                androidx.compose.material3.LinearProgressIndicator(progress = { stepProgress }, modifier = Modifier.fillMaxWidth())
+                Text(
+                    if (steps >= 7000) "به هدف ۷۰۰۰ قدم رسیدی."
+                    else "تا هدف روزانه \${String.format(Locale.US, "%,d", 7000 - steps)} قدم باقی مانده.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (!hasActivityPermission) {
+                    Button(onClick = { permissionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION) }) {
+                        Text("فعال‌سازی شمارش قدم")
+                    }
+                } else if (stepSensor == null) {
+                    Text("حسگر شمارش قدم در این دستگاه در دسترس نیست.", style = MaterialTheme.typography.bodySmall)
+                }
+                Button(onClick = {
+                    DailyHealthPreferences.resetSteps(context)
+                    steps = 0
+                }) { Text("صفر کردن قدم‌های امروز") }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("آب مصرفی", style = MaterialTheme.typography.titleLarge)
+                Text("$water از ۸ لیوان", style = MaterialTheme.typography.headlineSmall)
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { (water / 8f).coerceIn(0f, 1f) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { water = DailyHealthPreferences.addWater(context, 1) }) { Text("+ یک لیوان") }
+                    Button(onClick = { water = DailyHealthPreferences.addWater(context, -1) }, enabled = water > 0) { Text("−") }
+                }
+            }
+        }
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("کالری دریافتی", style = MaterialTheme.typography.titleLarge)
+                Text("$eatenCalories kcal", style = MaterialTheme.typography.headlineSmall)
+                TextField(value = foodName, onValueChange = { foodName = it }, modifier = Modifier.fillMaxWidth(), label = { Text("نام غذا") }, singleLine = true)
+                TextField(value = foodCalories, onValueChange = { foodCalories = it.filter(Char::isDigit).take(5) }, modifier = Modifier.fillMaxWidth(), label = { Text("کالری (kcal)") }, singleLine = true)
+                Button(
+                    onClick = {
+                        val parsed = foodCalories.toIntOrNull()
+                        if (parsed != null && foodName.isNotBlank()) {
+                            foods = DailyHealthPreferences.addFood(context, foodName, parsed)
+                            foodName = ""
+                            foodCalories = ""
+                        }
+                    },
+                    enabled = foodName.isNotBlank() && (foodCalories.toIntOrNull() ?: 0) in 0..10000
+                ) { Text("ثبت خوراکی") }
+                if (foods.isEmpty()) {
+                    Text("هنوز خوراکی ثبت نشده است.", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    foods.forEach { item ->
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("\${item.name} · \${item.calories} kcal", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            TextButton(onClick = { foods = DailyHealthPreferences.removeFood(context, item.id) }) { Text("حذف") }
+                        }
+                    }
+                }
+            }
+        }
+        Text("اطلاعات روزانه روی همین دستگاه ذخیره می‌شوند.", style = MaterialTheme.typography.labelSmall)
+    }
+}
 
 @Composable
 private fun ProfileScreen(

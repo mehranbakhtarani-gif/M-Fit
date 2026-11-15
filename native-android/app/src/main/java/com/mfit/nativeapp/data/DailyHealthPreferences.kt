@@ -25,24 +25,25 @@ object DailyHealthPreferences {
         val p = prefs(context)
         if (p.getString(KEY_DAY, null) != day) {
             p.edit().putString(KEY_DAY, day).putLong(KEY_LAST_COUNTER, totalSinceBoot).putInt(KEY_ACCUMULATED, 0).apply()
+            p.edit().putInt("steps_$day", 0).apply()
             return 0
         }
         val last = p.getLong(KEY_LAST_COUNTER, totalSinceBoot)
         val accumulated = p.getInt(KEY_ACCUMULATED, 0)
         val increment = if (totalSinceBoot >= last) (totalSinceBoot - last).coerceAtMost(Int.MAX_VALUE.toLong()).toInt() else 0
         val updated = (accumulated.toLong() + increment).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
-        p.edit().putLong(KEY_LAST_COUNTER, totalSinceBoot).putInt(KEY_ACCUMULATED, updated).apply()
+        p.edit().putLong(KEY_LAST_COUNTER, totalSinceBoot).putInt(KEY_ACCUMULATED, updated).putInt("steps_$day", updated).apply()
         return updated
     }
 
     fun resetSteps(context: Context, day: String = todayKey()) {
         val p = prefs(context)
-        p.edit().putString(KEY_DAY, day).putInt(KEY_ACCUMULATED, 0).apply()
+        p.edit().putString(KEY_DAY, day).putInt(KEY_ACCUMULATED, 0).putInt("steps_$day", 0).apply()
     }
 
     fun steps(context: Context, day: String = todayKey()): Int {
         val p = prefs(context)
-        return if (p.getString(KEY_DAY, null) == day) p.getInt(KEY_ACCUMULATED, 0) else 0
+        return if (p.getString(KEY_DAY, null) == day) p.getInt(KEY_ACCUMULATED, 0) else p.getInt("steps_$day", 0)
     }
 
     fun water(context: Context, day: String = todayKey()): Int =

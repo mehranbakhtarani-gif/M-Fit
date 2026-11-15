@@ -325,7 +325,7 @@ if (!mainSource.includes('MfitLiveUpdatePlugin')) {
 }
 if (!mainSource.includes('MfitHapticsPlugin')) {
   mainSource = mainSource.replace('import com.getcapacitor.BridgeActivity;', 'import com.getcapacitor.BridgeActivity;\nimport com.mfit.wellness.plugins.MfitHapticsPlugin;');
-  mainSource = mainSource.replace('public class MainActivity extends BridgeActivity {', 'public class MainActivity extends BridgeActivity {\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        registerPlugin(MfitHapticsPlugin.class);\n        super.onCreate(savedInstanceState);\n    }');
+  mainSource = mainSource.replace('registerPlugin(MfitMotionPlugin.class);', 'registerPlugin(MfitMotionPlugin.class);\n        registerPlugin(MfitHapticsPlugin.class);');
 }
 await writeFile(mainPath, mainSource);
 console.log('Generated native haptics, Live Update, and route sharing integrations.');

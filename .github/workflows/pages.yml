@@ -80,3 +80,5 @@ jobs:
 # Publish GPS route filtering fix and refresh PWA shell cache.
 
 # Publish improved initial GPS fix using the best repeated location sample.
+
+# Publish longer initial GPS precision lock.

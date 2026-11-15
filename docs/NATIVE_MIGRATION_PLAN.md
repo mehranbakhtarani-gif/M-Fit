@@ -170,3 +170,14 @@ Notes and remaining work:
 - The estimator uses `MET × body mass (kg) × elapsed hours`; this is an approximation, not a measured energy expenditure.
 - When no valid body mass exists, calories remain unavailable (zero internally) and the UI explicitly asks the user to enter weight instead of silently assuming 70 kg.
 - Changing profile weight affects the next activity; an activity already in progress retains the weight loaded at its start.
+
+
+## Native health dashboard — first implementation slice
+
+- Replaced the Native Health placeholder with a local daily dashboard.
+- Step count uses Android's hardware `TYPE_STEP_COUNTER` sensor when available and requests `ACTIVITY_RECOGNITION` on Android 10+.
+- The daily counter persists accumulated steps and the last hardware counter reading, handling day rollover and sensor-counter reset without discarding already accumulated steps.
+- Hydration supports adding/removing one glass, with a daily target display of eight glasses.
+- Food log supports manual food name and calorie entry, per-item deletion, and daily calorie totals.
+- Daily steps, hydration, and food entries are stored locally in app-private SharedPreferences. No existing PWA localStorage or IndexedDB data is read, changed, or deleted.
+- Remaining Health parity work: fasting timer, AI food scan (requires a real secure endpoint), weekly insights, motion fallback for devices without a step-counter sensor, and import/export/migration from PWA data.

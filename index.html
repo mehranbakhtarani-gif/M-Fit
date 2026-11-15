@@ -1018,6 +1018,8 @@ if('serviceWorker'in navigator && window.MfitNativeMotion?.isNative){
   }
  }catch(e){}
  const save=()=>{try{storageSet(storeKey,JSON.stringify(state))}catch(e){}};
+ const scheduleNativeFastAlert=async()=>{try{if(window.MfitNativeNotifications?.isNative&&state.fasting&&state.start>0)await window.MfitNativeNotifications.scheduleFastingComplete(state.start+state.target*3600000)}catch(error){console.warn('M FIT fasting notification scheduling failed:',error)}};
+ const cancelNativeFastAlert=async()=>{try{if(window.MfitNativeNotifications?.isNative)await window.MfitNativeNotifications.cancelFastingComplete()}catch(error){console.warn('M FIT fasting notification cancellation failed:',error)}};
  const fmt=n=>{n=Math.max(0,Math.floor(n));return [Math.floor(n/3600),Math.floor(n%3600/60),n%60].map(v=>String(v).padStart(2,'0')).join(':')};
  function paint(){
   const clock=$('fastClock'),status=$('fastStatus'),bar=$('fastProgress'),remaining=$('fastRemaining'),toggle=$('fastToggle'),hours=$('fastHours'),startTimeInput=$('fastStartTime');
@@ -1035,7 +1037,8 @@ if('serviceWorker'in navigator && window.MfitNativeMotion?.isNative){
      state.completed=true;save();
      const message='Fasting time finished';
      const toast=$('toast');if(toast){toast.textContent=message;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),4500)}
-     if('Notification' in window&&Notification.permission==='granted'){
+     if(window.MfitNativeNotifications?.isNative){cancelNativeFastAlert()}
+     else if('Notification' in window&&Notification.permission==='granted'){
       try{new Notification('M FIT',{body:message,tag:'mfit-fast-finished'})}catch(e){}
      }
     }
@@ -1090,11 +1093,27 @@ if('serviceWorker'in navigator && window.MfitNativeMotion?.isNative){
  const notify=$('fastNotify');
  if(notify){
   const refreshNotify=()=>{
+   if(window.MfitNativeNotifications?.isNative){
+    window.MfitNativeNotifications.checkPermission().then(permission=>{
+     notify.disabled=false;
+     notify.textContent=permission.display==='granted'?'✓ NOTIFICATIONS ON':permission.display==='denied'?'NOTIFICATIONS BLOCKED':'♧ ENABLE NOTIFICATIONS';
+    }).catch(()=>{notify.textContent='ENABLE NOTIFICATIONS';notify.disabled=false});
+    return;
+   }
    if(!('Notification' in window)){notify.textContent='ALERTS NOT SUPPORTED';notify.disabled=true;return}
    notify.textContent=Notification.permission==='granted'?'✓ NOTIFICATIONS ON':Notification.permission==='denied'?'NOTIFICATIONS BLOCKED':'♧ ENABLE NOTIFICATIONS';
   };
   refreshNotify();
   notify.addEventListener('click',async()=>{
+   if(window.MfitNativeNotifications?.isNative){
+    try{
+     const permission=await window.MfitNativeNotifications.requestPermission();
+     refreshNotify();
+     if(permission.display==='granted'&&state.fasting)await scheduleNativeFastAlert();
+     const t=$('toast');if(t){t.textContent=permission.display==='granted'?'Fasting notifications enabled':'Notification permission not granted';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+    }catch(error){const t=$('toast');if(t){t.textContent='Could not enable notifications';t.classList.add('show')}}
+    return;
+   }
    if(!('Notification' in window)){refreshNotify();return}
    if(Notification.permission==='granted'){if(typeof toastMessage==='function')toastMessage('Notifications are already enabled');else{const t=$('toast');if(t){t.textContent='Notifications are already enabled';t.classList.add('show')}}return}
    if(Notification.permission==='denied'){const t=$('toast');if(t){t.textContent='Enable notifications in browser settings';t.classList.add('show')}return}
@@ -1113,16 +1132,18 @@ if('serviceWorker'in navigator && window.MfitNativeMotion?.isNative){
    else{
     state.target=Math.max(1,Math.min(24,Number(hours&&hours.value)||state.target||16));
     const now=new Date(),chosen=(startTime&&/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime.value))?startTime.value:currentLocalTime();const [hh,mm]=chosen.split(':').map(Number);const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),hh,mm,0,0);if(start.getTime()>now.getTime())start.setDate(start.getDate()-1);state.start=start.getTime();state.startTime=timeInputValue(state.start);state.fasting=true;state.completed=false;if(startTime)startTime.value=state.startTime;
-    if('Notification' in window&&Notification.permission==='default'){
+    if(window.MfitNativeNotifications?.isNative){scheduleNativeFastAlert()}
+    else if('Notification' in window&&Notification.permission==='default'){
      try{Notification.requestPermission()}catch(e){}
     }
    }
+   if(!state.fasting)cancelNativeFastAlert();
    save();paint();
    const toast=$('toast');if(toast){toast.textContent=state.fasting?'Fasting timer started':'Fasting session ended';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1800)}
   },true);
  }
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){paint();save()}});
- paint();setInterval(paint,1000);
+ paint();if(state.fasting)scheduleNativeFastAlert();setInterval(paint,1000);
 })();
 </script>
 <script>

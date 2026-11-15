@@ -16,6 +16,7 @@
   if (!appData) throw new Error("M-Fit data was not found in this browser origin.");
 
   const activeSession = parseStoredJson(DRAFT_KEY);
+  const fastingState = parseStoredJson("mfit-fast-timer-v2");
   const activities = await new Promise((resolve, reject) => {
     if (!("indexedDB" in window)) return reject(new Error("IndexedDB is unavailable."));
     const request = indexedDB.open(DB_NAME);
@@ -45,6 +46,7 @@
     exportedAtMillis: Date.now(),
     appData,
     activeSession,
+    fastingState,
     activities
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
@@ -59,7 +61,8 @@
   console.info("M-Fit backup exported. Source data was read only and was not modified.", {
     days: Object.keys(appData.days || {}).length,
     activities: activities.length,
-    hasActiveSession: !!activeSession
+    hasActiveSession: !!activeSession,
+    hasFastingState: !!fastingState
   });
 })().catch(error => {
   console.error("M-Fit export failed:", error);

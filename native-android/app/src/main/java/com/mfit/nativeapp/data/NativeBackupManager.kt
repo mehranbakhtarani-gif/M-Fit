@@ -10,7 +10,8 @@ object NativeBackupManager {
         "mfit_profile",
         "mfit_daily_health",
         "mfit_fasting",
-        "mfit_profile_measurements"
+        "mfit_profile_measurements",
+        "mfit_legacy_body_measurements"
     )
 
     suspend fun export(context: Context): String {
@@ -234,10 +235,10 @@ object NativeBackupManager {
                 .apply()
         }
         if (measurementArray.length() > 0) {
-            context.getSharedPreferences("mfit_legacy_body_measurements", Context.MODE_PRIVATE)
-                .edit()
-                .putString("records", measurementArray.toString())
-                .apply()
+            val legacyMeasurements = context.getSharedPreferences("mfit_legacy_body_measurements", Context.MODE_PRIVATE)
+            if (!legacyMeasurements.contains("records")) {
+                legacyMeasurements.edit().putString("records", measurementArray.toString()).apply()
+            }
         }
 
         var restoredFasting = 0

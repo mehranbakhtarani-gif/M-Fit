@@ -75,6 +75,30 @@ public class MfitSharePlugin extends Plugin {
     getContext().getContentResolver().update(uri, ready, null, null);
     return uri;
   }
+  @PluginMethod public void saveBackup(PluginCall call) {
+    try {
+      if (Build.VERSION.SDK_INT < 29) throw new Exception("Android 10 or newer is required to save backups.");
+      String encoded = call.getString("data");
+      if (encoded == null || encoded.isEmpty()) throw new Exception("Backup data is empty.");
+      byte[] bytes = Base64.decode(encoded, Base64.DEFAULT);
+      String name = call.getString("fileName", "M-FIT-backup.json").replaceAll("[^A-Za-z0-9._-]", "_");
+      if (!name.toLowerCase().endsWith(".json")) name += ".json";
+      ContentValues values = new ContentValues();
+      values.put(MediaStore.Downloads.DISPLAY_NAME, name);
+      values.put(MediaStore.Downloads.MIME_TYPE, "application/json");
+      values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/M-FIT");
+      values.put(MediaStore.Downloads.IS_PENDING, 1);
+      Uri uri = getContext().getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+      if (uri == null) throw new Exception("Android could not create the backup file.");
+      try (OutputStream stream = getContext().getContentResolver().openOutputStream(uri)) {
+        if (stream == null) throw new Exception("Could not open the backup file.");
+        stream.write(bytes); stream.flush();
+      } catch (Exception error) { getContext().getContentResolver().delete(uri, null, null); throw error; }
+      ContentValues ready = new ContentValues(); ready.put(MediaStore.Downloads.IS_PENDING, 0);
+      getContext().getContentResolver().update(uri, ready, null, null);
+      JSObject result = new JSObject(); result.put("saved", true); result.put("uri", uri.toString()); call.resolve(result);
+    } catch (Exception error) { call.reject("Could not save M-FIT backup: " + error.getMessage(), error); }
+  }
   @PluginMethod public void saveImage(PluginCall call) {
     try {
       Uri uri = writeImage(call);

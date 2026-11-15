@@ -150,3 +150,13 @@ Notes and remaining work:
 - The route scrubber is a manual replay control, not yet a timed animation with playback speed controls.
 - Device verification is still required for map gestures, tile loading, attribution visibility, and memory/lifecycle behavior on the target Android devices.
 - This implementation does not alter the PWA or existing activity data schema.
+
+
+## Live activity state synchronization
+
+- The foreground GPS service publishes an in-process `StateFlow<ActivitySnapshot?>` as its live state stream.
+- Compose observes the stream with lifecycle-aware collection; elapsed time refreshes every second and accepted GPS fixes refresh distance, current/average speed, calorie estimate, and point count.
+- Pause, resume, and finish publish explicit snapshots. The finished snapshot remains available after the service stops so the UI can render the final metrics.
+- If the service is unexpectedly destroyed while a session is still running or paused, the stream is cleared rather than leaving stale live metrics on screen.
+- Room remains the durable source for session history and track points; the StateFlow is only a live, process-local presentation stream.
+- Validation still required: run the newest CI build/tests, then test on a physical Android device for permission denial, pause/resume, screen-off tracking, service termination, and final history refresh.

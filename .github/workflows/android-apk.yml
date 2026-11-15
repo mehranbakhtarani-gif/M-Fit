@@ -41,7 +41,7 @@ jobs:
           packages: 'platform-tools'
           accept-android-sdk-licenses: true
       - name: Install Android platform and build tools
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Check inline JavaScript syntax
@@ -73,8 +73,12 @@ jobs:
         run: npm run prepare:web
       - name: Generate Android project
         run: npx cap add android
-      - name: Apply Mfit launcher icon
+      - name: Generate Mfit launcher resources and native Live Update integration
         run: npm run prepare:android
+      - name: Verify Android SDK levels for Live Updates
+        run: |
+          grep -q 'compileSdkVersion = 36' android/variables.gradle
+          grep -q 'targetSdkVersion = 36' android/variables.gradle
       - name: Sync Capacitor plugins and web assets
         run: npx cap sync android
       - name: Build debug APK

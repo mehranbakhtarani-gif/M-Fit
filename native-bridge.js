@@ -5,7 +5,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 const MfitMotion = registerPlugin('MfitMotion');
-const MfitIsland = registerPlugin('MfitIsland');
+const MfitLiveUpdate = registerPlugin('MfitLiveUpdate');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
@@ -127,13 +127,10 @@ window.MfitNativeMotion = {
 };
 
 
-window.MfitWorkoutIsland = {
+window.MfitLiveUpdate = {
   isNative,
-  listener: null,
-  async hasPermission(){ if(!isNative)return {granted:false}; return MfitIsland.hasPermission(); },
-  async requestPermission(){ if(!isNative)return {granted:false}; return MfitIsland.requestPermission(); },
-  async start(data){ if(!isNative)return {permission:false}; return MfitIsland.start(data); },
-  async update(data){ if(isNative) return MfitIsland.update(data); },
-  async stop(){ if(isNative) return MfitIsland.stop(); },
-  async onControl(callback){ if(!isNative||this.listener)return; this.listener=await MfitIsland.addListener('control',event=>callback&&callback(event?.action)); }
+  async canPromote(){ if(!isNative)return {api36:false,notificationsEnabled:false}; return MfitLiveUpdate.canPromote(); },
+  async start(data){ if(!isNative)return {shown:false}; return MfitLiveUpdate.start(data); },
+  async update(data){ if(isNative)return MfitLiveUpdate.update(data); },
+  async stop(){ if(isNative)return MfitLiveUpdate.stop(); }
 };

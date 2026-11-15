@@ -914,7 +914,15 @@ $('history').addEventListener('click',async event=>{const button=event.target.cl
    metrics.forEach((m,i)=>{const x=105+i*200;ctx.fillStyle='#edf6f1';roundedRectPath(x,1160,190,145,25);ctx.fill();ctx.fillStyle='#78958a';ctx.font='700 15px system-ui';ctx.fillText(m[0],x+16,1205);ctx.fillStyle='#183e35';ctx.font='800 29px system-ui';ctx.fillText(m[1],x+16,1265)});
    ctx.fillStyle='#78958a';ctx.font='500 20px system-ui';ctx.fillText(stats.activityDate||'',105,1375);
    ctx.fillStyle='#91a69e';ctx.font='600 18px system-ui';ctx.textAlign='right';ctx.fillText('M FIT · MOVE WELL',1095,1375);ctx.textAlign='left';
-   canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Could not create route image')),'image/png');
+   const finishBlob=blob=>blob?resolve(blob):reject(new Error('Canvas produced an empty image'));
+   if(typeof canvas.toBlob==='function'){
+    try{canvas.toBlob(finishBlob,'image/png')}catch(error){
+     console.warn('M FIT canvas.toBlob failed; using data URL fallback:',error);
+     try{const url=canvas.toDataURL('image/png');const binary=atob(url.split(',')[1]);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);finishBlob(new Blob([bytes],{type:'image/png'}))}catch(fallbackError){reject(fallbackError)}
+    }
+   }else{
+    try{const url=canvas.toDataURL('image/png');const binary=atob(url.split(',')[1]);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);finishBlob(new Blob([bytes],{type:'image/png'}))}catch(error){reject(error)}
+   }
   });
  }
  let pendingRouteShareFile=null,pendingRoutePreviewUrl=null;
@@ -975,7 +983,7 @@ $('exportRoute').onclick=async()=>{
    const avgSpeed=seconds>0?km/(seconds/3600):0,avgPace=km>0?seconds/km:0;const blob=await routeImageBlob(route,{mode:modeName,distance:km.toFixed(2),duration:fmt(seconds),avgSpeed,avgPace,kcal,weather,activityDate});
    showRoutePreview(new File([blob],'mfit-route.png',{type:'image/png'}));
   }finally{map.setView(oldCenter,oldZoom,{animate:false})}
- }catch(error){console.error('M FIT route share failed:',error);toast(error.message==='Map library did not load'?'نقشه بارگذاری نشد؛ اتصال اینترنت را بررسی کن':'ساخت تصویر مسیر انجام نشد؛ نقشه را باز کن و دوباره امتحان کن')}
+ }catch(error){console.error('M FIT route share failed:',error);const detail=String(error?.message||error||'Unknown error');toast(error.message==='Map library did not load'?'نقشه بارگذاری نشد؛ اتصال اینترنت را بررسی کن':detail.slice(0,110))}
  finally{button.disabled=false;button.textContent=oldLabel}
 };
 function resetDailySteps(){ensureCurrentDay();day.steps=0;data.days[todayKey]=day;save();$('steps').innerHTML='0 <span class="metric-unit">steps</span>';$('stepbar').style.width='0%';renderWeek();if(typeof renderProfile==='function')renderProfile();$('motionStatus').textContent=motionOn?'Step counter active · ready to count':'Step counter paused';toast('Today’s steps reset to zero')}

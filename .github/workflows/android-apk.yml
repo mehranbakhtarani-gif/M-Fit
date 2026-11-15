@@ -9,6 +9,7 @@ on:
     branches: [main, mfit-complete-fixes]
     paths:
       - 'index.html'
+      - 'sw.js'
       - 'native-bridge.js'
       - 'icon.svg'
       - 'assets/**'

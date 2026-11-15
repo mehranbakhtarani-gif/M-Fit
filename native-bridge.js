@@ -148,3 +148,11 @@ window.MfitNativeShare = {
     return MfitShare.shareImage({ data, fileName });
   }
 };
+
+window.MfitNativeBackup = {
+  isNative,
+  async saveBackup(data, fileName = 'M-FIT-backup.json') {
+    if (!isNative) throw new Error('Native Android storage is unavailable');
+    return MfitShare.saveBackup({ data, fileName });
+  }
+};

@@ -85,7 +85,7 @@ window.MfitNativeTTS = {
       backgroundTitle: 'Mfit activity tracking',
       requestPermissions: true,
       stale: false,
-      distanceFilter: 0
+      distanceFilter: 3
     }, (location, error) => {
       if (error) { if (onError) onError(error); return; }
       if (!location || !onLocation) return;

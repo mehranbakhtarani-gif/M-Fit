@@ -53,6 +53,8 @@ import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
 import com.mfit.nativeapp.data.UserProfilePreferences
 import com.mfit.nativeapp.data.DailyHealthPreferences
+import com.mfit.nativeapp.data.FastingPreferences
+import com.mfit.nativeapp.data.FastingSession
 import com.mfit.nativeapp.location.ActivityLocationService
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -326,6 +328,15 @@ private fun MfitApp() {
 
 
 
+
+private fun formatFastingDuration(millis: Long): String {
+    val totalSeconds = millis / 1000L
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
+    val seconds = totalSeconds % 60L
+    return String.format(Locale.US, "%02d:%02d:%02d", hours, minutes, seconds)
+}
+
 @Composable
 private fun HealthDashboardScreen() {
     val context = LocalContext.current
@@ -334,6 +345,14 @@ private fun HealthDashboardScreen() {
     var steps by remember { mutableIntStateOf(DailyHealthPreferences.steps(context)) }
     var water by remember { mutableIntStateOf(DailyHealthPreferences.water(context)) }
     var foods by remember { mutableStateOf(DailyHealthPreferences.foods(context)) }
+    var fastingSession by remember { mutableStateOf(FastingPreferences.active(context)) }
+    var clockNow by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(fastingSession?.startedAtMillis, fastingSession?.targetEndAtMillis) {
+        while (fastingSession != null) {
+            clockNow = System.currentTimeMillis()
+            delay(1000L)
+        }
+    }
     var foodName by remember { mutableStateOf("") }
     var foodCalories by remember { mutableStateOf("") }
     var hasActivityPermission by remember {
@@ -408,6 +427,40 @@ private fun HealthDashboardScreen() {
                 }
             }
         }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("تایمر روزه‌داری", style = MaterialTheme.typography.titleLarge)
+                if (fastingSession == null) {
+                    Text("مدت روزه‌ات را انتخاب کن تا زمان‌سنج شروع شود.", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Button(onClick = {
+                            fastingSession = FastingPreferences.start(context, 14)
+                        }) { Text("۱۴ ساعت") }
+                        Button(onClick = {
+                            fastingSession = FastingPreferences.start(context, 16)
+                        }) { Text("۱۶ ساعت") }
+                        Button(onClick = {
+                            fastingSession = FastingPreferences.start(context, 18)
+                        }) { Text("۱۸ ساعت") }
+                    }
+                } else {
+                    val remaining = (fastingSession!!.targetEndAtMillis - clockNow).coerceAtLeast(0L)
+                    val elapsed = (clockNow - fastingSession!!.startedAtMillis).coerceAtLeast(0L)
+                    Text(
+                        if (remaining == 0L) "زمان هدف روزه‌داری به پایان رسیده است."
+                        else "زمان باقی‌مانده: \${formatFastingDuration(remaining)}",
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    Text("زمان سپری‌شده: \${formatFastingDuration(elapsed)}", style = MaterialTheme.typography.bodyMedium)
+                    Button(onClick = {
+                        FastingPreferences.stop(context)
+                        fastingSession = null
+                    }) { Text("پایان روزه‌داری") }
+                }
+            }
+        }
+
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("کالری دریافتی", style = MaterialTheme.typography.titleLarge)

@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Slider
 import androidx.compose.ui.viewinterop.AndroidView
@@ -364,7 +366,7 @@ private fun HealthDashboardScreen() {
     val eatenCalories = foods.sumOf { it.calories }
     val stepProgress = (steps / 7000f).coerceIn(0f, 1f)
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 18.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("سلامت روزانه", style = MaterialTheme.typography.headlineMedium)

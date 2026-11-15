@@ -53,6 +53,7 @@ import com.mfit.nativeapp.data.ActivitySessionEntity
 import com.mfit.nativeapp.data.ActivityTrackPointEntity
 import com.mfit.nativeapp.data.UserProfilePreferences
 import com.mfit.nativeapp.data.DailyHealthPreferences
+import com.mfit.nativeapp.data.BodyMeasurementPreferences
 import com.mfit.nativeapp.data.FastingPreferences
 import com.mfit.nativeapp.data.FastingSession
 import com.mfit.nativeapp.data.FastingAlarmReceiver
@@ -109,6 +110,7 @@ private fun MfitApp() {
     var selectedSessionId by remember { mutableStateOf<String?>(null) }
     var selectedPoints by remember { mutableStateOf<List<ActivityTrackPointEntity>>(emptyList()) }
     var savedWeightKg by remember { mutableStateOf(UserProfilePreferences.getWeightKg(context)) }
+    var weightHistory by remember { mutableStateOf(BodyMeasurementPreferences.history(context)) }
     var weightInput by remember { mutableStateOf(savedWeightKg?.let { formatWeight(it) } ?: "") }
 
     LaunchedEffect(Unit) {
@@ -217,6 +219,7 @@ private fun MfitApp() {
                 MfitTab.Profile -> ProfileScreen(
                     weightInput = weightInput,
                     savedWeightKg = savedWeightKg,
+                    weightHistory = weightHistory,
                     onWeightInputChange = { weightInput = it },
                     onSaveWeight = {
                         val parsed = weightInput.trim().replace(',', '.').toDoubleOrNull()
@@ -224,6 +227,7 @@ private fun MfitApp() {
                             Toast.makeText(context, "وزن باید عددی بین ۲۰ تا ۲۵۰ کیلوگرم باشد.", Toast.LENGTH_LONG).show()
                         } else {
                             savedWeightKg = parsed
+                            weightHistory = BodyMeasurementPreferences.add(context, parsed)
                             weightInput = formatWeight(parsed)
                             Toast.makeText(context, "وزن در پروفایل ذخیره شد.", Toast.LENGTH_SHORT).show()
                         }
@@ -521,6 +525,7 @@ private fun HealthDashboardScreen() {
 private fun ProfileScreen(
     weightInput: String,
     savedWeightKg: Double?,
+    weightHistory: List<com.mfit.nativeapp.data.BodyMeasurement>,
     onWeightInputChange: (String) -> Unit,
     onSaveWeight: () -> Unit
 ) {
@@ -545,6 +550,17 @@ private fun ProfileScreen(
                 ?: "هنوز وزنی ثبت نشده است؛ کالری فعالیت‌ها تا ثبت وزن محاسبه نمی‌شود.",
             style = MaterialTheme.typography.bodyMedium
         )
+        if (weightHistory.isNotEmpty()) {
+            Text("روند تغییرات وزن", style = MaterialTheme.typography.titleLarge)
+            val minWeight = weightHistory.minOf { it.weightKg }.toFloat()
+            val maxWeight = weightHistory.maxOf { it.weightKg }.toFloat()
+            weightHistory.takeLast(12).forEach { measurement ->
+                val ratio = if (maxWeight <= minWeight) 1f else
+                    ((measurement.weightKg.toFloat() - minWeight) / (maxWeight - minWeight)).coerceIn(0.05f, 1f)
+                Text("${java.text.SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(measurement.recordedAtMillis))} · ${formatWeight(measurement.weightKg)} kg")
+                androidx.compose.material3.LinearProgressIndicator(progress = { ratio }, modifier = Modifier.fillMaxWidth())
+            }
+        }
         Text(
             "وزن جدید از فعالیت بعدی در محاسبه کالری استفاده می‌شود. اطلاعات پروفایل فقط روی همین دستگاه ذخیره می‌شود.",
             style = MaterialTheme.typography.bodySmall

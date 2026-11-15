@@ -34,6 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.mfit.nativeapp.core.activity.ActivityType
 import com.mfit.nativeapp.location.ActivityLocationService
+import com.mfit.nativeapp.data.ActivityDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 private enum class MfitTab(val label: String) {
@@ -55,6 +58,16 @@ private fun MfitApp() {
     var selectedTab by remember { mutableStateOf(MfitTab.Health) }
     var trackingState by remember { mutableStateOf(UiTrackingState.IDLE) }
     var activityType by remember { mutableStateOf(ActivityType.WALK) }
+    var recoveredNotice by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val dao = ActivityDatabase.get(context).activityDao()
+        val unfinished = withContext(Dispatchers.IO) { dao.findUnfinishedSession() }
+        if (unfinished != null) {
+            withContext(Dispatchers.IO) { dao.markUnfinishedSessionsInterrupted() }
+            recoveredNotice = "یک فعالیت ناتمام از قبل پیدا شد؛ نقاط GPS ثبت‌شده آن حفظ شده‌اند. وضعیت فعالیت به‌عنوان متوقف‌شده بر اثر بسته‌شدن برنامه ثبت شد."
+        }
+    }
 
     fun sendServiceAction(action: String, type: ActivityType? = null) {
         val intent = Intent(context, ActivityLocationService::class.java).setAction(action)
@@ -131,6 +144,9 @@ private fun MfitApp() {
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text("ثبت فعالیت", style = MaterialTheme.typography.headlineMedium)
+                    recoveredNotice?.let {
+                        Text(it, modifier = Modifier.padding(vertical = 10.dp), style = MaterialTheme.typography.bodySmall)
+                    }
                     Text("نوع فعالیت: ${activityType.name}", modifier = Modifier.padding(12.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = { activityType = ActivityType.WALK }, enabled = trackingState == UiTrackingState.IDLE || trackingState == UiTrackingState.FINISHED) { Text("پیاده‌روی") }

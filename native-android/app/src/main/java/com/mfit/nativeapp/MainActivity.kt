@@ -301,6 +301,17 @@ private fun MfitApp() {
             when (selectedTab) {
                 MfitTab.Health -> HealthDashboardScreen()
                 MfitTab.Profile -> ProfileScreen(
+                    onSaveMeasurements = { weight, height, waist ->
+                        runCatching {
+                            weightHistory = BodyMeasurementPreferences.addMeasurement(context, weight, height, waist)
+                            if (weight != null) {
+                                UserProfilePreferences.saveWeightKg(context, weight)
+                                savedWeightKg = weight
+                                weightInput = formatWeight(weight)
+                            }
+                            true
+                        }.getOrDefault(false)
+                    },
                     weightInput = weightInput,
                     savedWeightKg = savedWeightKg,
                     weightHistory = weightHistory,
@@ -668,6 +679,7 @@ private fun HealthDashboardScreen() {
 
 @Composable
 private fun ProfileScreen(
+    onSaveMeasurements: (Double?, Double?, Double?) -> Boolean,
     weightInput: String,
     savedWeightKg: Double?,
     weightHistory: List<com.mfit.nativeapp.data.BodyMeasurement>,
@@ -676,6 +688,9 @@ private fun ProfileScreen(
     onWeightInputChange: (String) -> Unit,
     onSaveWeight: () -> Unit
 ) {
+    val profileContext = LocalContext.current
+    var heightInput by remember { mutableStateOf(BodyMeasurementPreferences.latestHeightCm(profileContext)?.let { formatWeight(it) } ?: "") }
+    var waistInput by remember { mutableStateOf(BodyMeasurementPreferences.latestWaistCm(profileContext)?.let { formatWeight(it) } ?: "") }
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 18.dp),
@@ -734,7 +749,7 @@ private fun ProfileScreen(
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Text("اندازه‌گیری بدن", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
-                Text("وزن بدن برای تخمین کالری فعالیت‌ها استفاده می‌شود.", style = MaterialTheme.typography.bodySmall, color = MfitPalette.muted)
+                Text("قد، وزن و دور کمر را ثبت کن تا روند تغییرات بدنت را دنبال کنی.", style = MaterialTheme.typography.bodySmall, color = MfitPalette.muted)
                 TextField(
                     value = weightInput,
                     onValueChange = onWeightInputChange,
@@ -743,8 +758,19 @@ private fun ProfileScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(15.dp)
                 )
-                Button(onClick = onSaveWeight, enabled = weightInput.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                    Text("ذخیره وزن")
+                TextField(value = heightInput, onValueChange = { heightInput = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }.take(6) }, modifier = Modifier.fillMaxWidth(), label = { Text("قد (سانتی‌متر)") }, singleLine = true, shape = RoundedCornerShape(15.dp))
+                TextField(value = waistInput, onValueChange = { waistInput = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' }.take(6) }, modifier = Modifier.fillMaxWidth(), label = { Text("دور کمر (سانتی‌متر)") }, singleLine = true, shape = RoundedCornerShape(15.dp))
+                Button(onClick = {
+                    val weight = weightInput.trim().replace(',', '.').toDoubleOrNull()
+                    val height = heightInput.trim().replace(',', '.').toDoubleOrNull()
+                    val waist = waistInput.trim().replace(',', '.').toDoubleOrNull()
+                    if (onSaveMeasurements(weight, height, waist)) {
+                        Toast.makeText(profileContext, "اندازه‌گیری‌ها ذخیره شد.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(profileContext, "مقادیر واردشده معتبر نیستند.", Toast.LENGTH_LONG).show()
+                    }
+                }, enabled = weightInput.isNotBlank() || heightInput.isNotBlank() || waistInput.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                    Text("ذخیره اندازه‌گیری‌ها")
                 }
                 Text(
                     savedWeightKg?.let { "وزن ذخیره‌شده: ${formatWeight(it)} کیلوگرم" }
@@ -762,20 +788,18 @@ private fun ProfileScreen(
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("روند تغییرات وزن", style = MaterialTheme.typography.titleMedium, color = MfitPalette.ink)
-                    val minWeight = weightHistory.minOf { it.weightKg }.toFloat()
-                    val maxWeight = weightHistory.maxOf { it.weightKg }.toFloat()
+                    val weighted = weightHistory.filter { it.weightKg != null }
+                    val minWeight = weighted.minOfOrNull { it.weightKg!! }?.toFloat() ?: 0f
+                    val maxWeight = weighted.maxOfOrNull { it.weightKg!! }?.toFloat() ?: 0f
                     weightHistory.takeLast(12).forEach { measurement ->
-                        val ratio = if (maxWeight <= minWeight) 1f else
+                        val ratio = if (measurement.weightKg == null || maxWeight <= minWeight) 1f else
                             ((measurement.weightKg.toFloat() - minWeight) / (maxWeight - minWeight)).coerceIn(0.05f, 1f)
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(java.text.SimpleDateFormat("yyyy/MM/dd", Locale.getDefault()).format(Date(measurement.recordedAtMillis)), style = MaterialTheme.typography.labelSmall, color = MfitPalette.muted)
-                            Text("${formatWeight(measurement.weightKg)} kg", style = MaterialTheme.typography.labelMedium, color = MfitPalette.ink)
+                            Text(listOfNotNull(measurement.weightKg?.let { "${formatWeight(it)} kg" }, measurement.heightCm?.let { "${formatWeight(it)} cm قد" }, measurement.waistCm?.let { "${formatWeight(it)} cm کمر" }).joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MfitPalette.ink)
                         }
-                        androidx.compose.material3.LinearProgressIndicator(
-                            progress = { ratio },
-                            modifier = Modifier.fillMaxWidth(),
-                            color = MfitPalette.green,
-                            trackColor = Color(0xFFDCEEE8)
+                        if (measurement.weightKg != null) androidx.compose.material3.LinearProgressIndicator(
+                            progress = { ratio }, modifier = Modifier.fillMaxWidth(), color = MfitPalette.green, trackColor = Color(0xFFDCEEE8)
                         )
                     }
                 }

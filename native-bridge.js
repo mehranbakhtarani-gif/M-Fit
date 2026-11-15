@@ -7,6 +7,7 @@ const BackgroundGeolocation = registerPlugin('BackgroundGeolocation');
 const MfitMotion = registerPlugin('MfitMotion');
 const MfitLiveUpdate = registerPlugin('MfitLiveUpdate');
 const MfitShare = registerPlugin('MfitShare');
+const MfitHaptics = registerPlugin('MfitHaptics');
 const isNative = Capacitor.isNativePlatform();
 
 async function getPersianTtsInfo() {
@@ -154,5 +155,22 @@ window.MfitNativeBackup = {
   async saveBackup(data, fileName = 'M-FIT-backup.json') {
     if (!isNative) throw new Error('Native Android storage is unavailable');
     return MfitShare.saveBackup({ data, fileName });
+  }
+};
+
+
+window.MfitNativeHaptics = {
+  isNative,
+  async tick() {
+    if (isNative) {
+      try { return await MfitHaptics.vibrate({ duration: 10 }); } catch (error) { /* Use browser fallback. */ }
+    }
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch (error) { /* Haptics are optional. */ }
+  },
+  async select() {
+    if (isNative) {
+      try { return await MfitHaptics.vibrate({ duration: 24 }); } catch (error) { /* Use browser fallback. */ }
+    }
+    try { if (navigator.vibrate) navigator.vibrate(24); } catch (error) { /* Haptics are optional. */ }
   }
 };

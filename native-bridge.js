@@ -174,3 +174,37 @@ window.MfitNativeHaptics = {
     try { if (navigator.vibrate) navigator.vibrate(24); } catch (error) { /* Haptics are optional. */ }
   }
 };
+
+
+window.MfitNativeNotifications = {
+  isNative,
+  async checkPermission() {
+    if (!isNative) return { display: 'prompt' };
+    return LocalNotifications.checkPermissions();
+  },
+  async requestPermission() {
+    if (!isNative) return { display: 'prompt' };
+    return LocalNotifications.requestPermissions();
+  },
+  async scheduleFastingComplete(at) {
+    if (!isNative) return { scheduled: false };
+    const permission = await LocalNotifications.checkPermissions();
+    if (permission.display !== 'granted') return { scheduled: false, permission: permission.display };
+    const date = new Date(at);
+    if (!Number.isFinite(date.getTime()) || date.getTime() <= Date.now()) return { scheduled: false };
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 16001,
+        title: 'M FIT',
+        body: 'Fasting time finished',
+        schedule: { at: date, allowWhileIdle: true },
+        extra: { type: 'fasting-complete' }
+      }]
+    });
+    return { scheduled: true };
+  },
+  async cancelFastingComplete() {
+    if (!isNative) return;
+    try { await LocalNotifications.cancel({ notifications: [{ id: 16001 }] }); } catch (error) { /* No pending reminder. */ }
+  }
+};

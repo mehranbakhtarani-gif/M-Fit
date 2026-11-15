@@ -33,6 +33,8 @@ const { readFile, writeFile } = await import('node:fs/promises');
 const javaSource = [
 'package com.mfit.wellness.plugins;',
 'import android.content.Context;',
+'import android.Manifest;',
+'import android.os.Build;',
 'import android.hardware.Sensor;',
 'import android.hardware.SensorEvent;',
 'import android.hardware.SensorEventListener;',
@@ -41,13 +43,23 @@ const javaSource = [
 'import com.getcapacitor.Plugin;',
 'import com.getcapacitor.PluginCall;',
 'import com.getcapacitor.PluginMethod;',
+'import com.getcapacitor.PermissionState;',
 'import com.getcapacitor.annotation.CapacitorPlugin;',
-'@CapacitorPlugin(name = "MfitMotion")',
+'import com.getcapacitor.annotation.Permission;',
+'import com.getcapacitor.annotation.PermissionCallback;',
+'@CapacitorPlugin(name = "MfitMotion", permissions = { @Permission(alias = "activityRecognition", strings = { Manifest.permission.ACTIVITY_RECOGNITION }) })',
 'public class MfitMotionPlugin extends Plugin implements SensorEventListener {',
 '  private SensorManager manager;',
 '  private Sensor stepDetector;',
 '  private boolean listening = false;',
 '  @PluginMethod public void start(PluginCall call) {',
+'    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && getPermissionState("activityRecognition") != PermissionState.GRANTED) { requestPermissionForAlias("activityRecognition", call, "activityRecognitionPermsCallback"); return; }',
+'    startSensor(call);',
+'  }',
+'  @PermissionCallback private void activityRecognitionPermsCallback(PluginCall call) {',
+'    if (getPermissionState("activityRecognition") == PermissionState.GRANTED) startSensor(call); else call.reject("Activity recognition permission is required for automatic step counting.");',
+'  }',
+'  private void startSensor(PluginCall call) {',
 '    if (listening) { JSObject r = new JSObject(); r.put("available", true); call.resolve(r); return; }',
 '    manager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);',
 '    stepDetector = manager == null ? null : manager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);',
@@ -168,7 +180,7 @@ public class MfitLiveUpdatePlugin extends Plugin {
 await writeFile(pluginDir + '/MfitLiveUpdatePlugin.java', livePlugin);
 const manifestPath = 'android/app/src/main/AndroidManifest.xml';
 let manifest = await readFile(manifestPath, 'utf8');
-for (const permission of ['android.permission.POST_NOTIFICATIONS', 'android.permission.POST_PROMOTED_NOTIFICATIONS']) {
+for (const permission of ['android.permission.ACTIVITY_RECOGNITION', 'android.permission.POST_NOTIFICATIONS', 'android.permission.POST_PROMOTED_NOTIFICATIONS']) {
   if (!manifest.includes(permission)) manifest = manifest.replace(/(<manifest\b[^>]*>)/, '$1\n    <uses-permission android:name="' + permission + '" />');
 }
 await writeFile(manifestPath, manifest);

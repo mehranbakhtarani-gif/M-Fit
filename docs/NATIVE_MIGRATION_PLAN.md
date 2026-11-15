@@ -100,3 +100,22 @@ Important limitations:
 - The 25m accuracy / 2m displacement / 35m/s plausibility defaults are initial conservative parameters and must be validated against real walking, running and cycling sessions on the target phone.
 - Calorie output is provisional until profile body mass and activity-specific calibration are wired in.
 - CI workflow exists, but no workflow run/build result has been observed yet; do not treat tests as passed until GitHub Actions reports success.
+
+## Implemented increment — Android GPS foreground service and Room persistence
+
+The Native activity path now includes an initial Android integration:
+
+- Added Google Play Services Location dependency and a high-accuracy Fused Location Provider request (2s target interval, 1s minimum interval).
+- Added `ActivityLocationService`, declared as a non-exported location foreground service. It creates an ongoing notification, handles start/pause/resume/finish commands, feeds fixes into the domain engine, and stores accepted route points.
+- Added runtime requests for precise/coarse location and Android 13+ notification permission. Precise location is required by the current start flow.
+- Added Android foreground-service location permissions. No background-location permission is requested: tracking is started from the visible activity and continues as a location foreground service.
+- Added Room database `mfit-activities.db` with activity-session and route-point tables, DAO queries, duplicate-safe point insertion, and session history retrieval.
+- Added a startup safeguard: if a previous process died with a RUNNING/PAUSED session still in the database, the next launch marks it INTERRUPTED and tells the user that already-written GPS points were preserved. This intentionally avoids fabricating elapsed time across an unknown process-death interval.
+
+Current limitations and release gates:
+- Process-death handling preserves recorded points and marks the session interrupted; it does not yet offer seamless continuation of the same live session.
+- The Compose Sport screen currently issues service commands and shows local UI state; it is not yet observing the service/database as a reactive source of truth, so UI state can reset after activity recreation.
+- Location collection and Room writes have not been verified on a physical device, screen-off, battery saver, permission-denial, approximate-location, or OEM background-management scenarios.
+- The service currently uses a provisional 2-second high-accuracy request. Battery use and GPS thresholds need field testing on the target phone.
+- The calorie estimate still uses a temporary 70kg assumption; connect profile body mass before showing it as a user-specific result.
+- No CI result is visible for the latest commit yet. The existence of source files is not proof of a successful Android build. Do not distribute an APK until GitHub Actions or a local Gradle build succeeds and physical-device tests pass.

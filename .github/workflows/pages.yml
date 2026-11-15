@@ -82,3 +82,5 @@ jobs:
 # Publish improved initial GPS fix using the best repeated location sample.
 
 # Publish longer initial GPS precision lock.
+
+# Deploy native Android GPS map-centering integration from mfit-complete-fixes.

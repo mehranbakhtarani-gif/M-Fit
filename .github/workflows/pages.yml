@@ -74,4 +74,4 @@ jobs:
 
 # Publish route-share canvas export compatibility fix from mfit-complete-fixes.
 
-<!-- route-export-diagnostic-refresh-20261115 -->
+# Refresh Pages for precise route-export error reporting and PNG fallback.

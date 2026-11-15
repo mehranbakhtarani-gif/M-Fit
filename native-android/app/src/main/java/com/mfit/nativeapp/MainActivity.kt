@@ -14,6 +14,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -89,7 +91,7 @@ private enum class UiTrackingState { IDLE, RUNNING, PAUSED, FINISHED }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { MfitApp() } }
+        setContent { MfitTheme { MfitApp() } }
     }
 }
 
@@ -218,7 +220,12 @@ private fun MfitApp() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MfitPalette.navGlass,
+                contentColor = MfitPalette.ink,
+                tonalElevation = 0.dp,
+                windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+            ) {
                 MfitTab.entries.forEach { tab ->
                     NavigationBarItem(
                         selected = selectedTab == tab,
@@ -237,8 +244,8 @@ private fun MfitApp() {
         }
     ) { padding ->
         Surface(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            color = MaterialTheme.colorScheme.background
+            modifier = Modifier.fillMaxSize().padding(padding).background(MfitPalette.pageBrush),
+            color = Color.Transparent
         ) {
             when (selectedTab) {
                 MfitTab.Health -> HealthDashboardScreen()

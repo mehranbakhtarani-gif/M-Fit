@@ -221,3 +221,11 @@ Notes and remaining work:
 - Add these under GitHub repository Settings → Secrets and variables → Actions → New repository secret. Never put the keystore or passwords in source control or chat.
 - The release pipeline does not silently fall back to debug signing. If any secret is missing, only the debug APK is produced.
 - Upgrade compatibility with any previously installed APK remains unverified until the same original signing certificate is confirmed. A different key cannot update an existing installation with the same application ID.
+
+
+## Existing APK signing compatibility finding
+
+- Compared the APK signing certificates from the two latest legacy Android APK workflow artifacts (workflow runs 43720393468 and 43720411414). Their SHA-256 certificate fingerprints differ.
+- This confirms the legacy debug workflow did not use one persistent signing key. The private key corresponding to the already-installed APK cannot be reconstructed from its public certificate.
+- To preserve the user's existing installation and its local data, the Native app now uses a separate package ID, `com.mfit.nativeapp`, while the legacy PWA APK retains `com.mfit.wellness`. They can be installed side-by-side; no uninstall or overwrite is required for migration.
+- Future Native releases must use the same persistent release keystore via the four Actions secrets described above. Without those secrets, CI produces only a debug APK and future update compatibility is not guaranteed.

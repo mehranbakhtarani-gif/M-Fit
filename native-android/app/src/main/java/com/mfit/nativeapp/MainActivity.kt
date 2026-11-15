@@ -55,6 +55,7 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.views.overlay.Polyline
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mfit.nativeapp.core.activity.SessionStatus
@@ -104,6 +105,13 @@ private fun MfitApp() {
         } else if (unfinished != null) {
             withContext(Dispatchers.IO) { dao.markUnfinishedSessionsInterrupted() }
             recoveredNotice = "یک فعالیت ناتمام پیدا شد؛ مسیرهای ذخیره‌شده حفظ شدند و وضعیت آن «ناتمام» ثبت شد."
+            historyRefresh++
+        }
+    }
+
+    LaunchedEffect(liveSnapshot?.status) {
+        if (liveSnapshot?.status == SessionStatus.FINISHED) {
+            delay(500L)
             historyRefresh++
         }
     }

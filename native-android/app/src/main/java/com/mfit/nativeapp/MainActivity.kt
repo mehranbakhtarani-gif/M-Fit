@@ -449,10 +449,10 @@ private fun HealthDashboardScreen() {
                     val elapsed = (clockNow - fastingSession!!.startedAtMillis).coerceAtLeast(0L)
                     Text(
                         if (remaining == 0L) "زمان هدف روزه‌داری به پایان رسیده است."
-                        else "زمان باقی‌مانده: \${formatFastingDuration(remaining)}",
+                        else "زمان باقی‌مانده: ${formatFastingDuration(remaining)}",
                         style = MaterialTheme.typography.headlineSmall
                     )
-                    Text("زمان سپری‌شده: \${formatFastingDuration(elapsed)}", style = MaterialTheme.typography.bodyMedium)
+                    Text("زمان سپری‌شده: ${formatFastingDuration(elapsed)}", style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = {
                         FastingPreferences.stop(context)
                         fastingSession = null
